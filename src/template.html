@@ -64,7 +64,7 @@ header h1{font:700 19px var(--display);margin:0;letter-spacing:.02em}
 @media (max-width:480px){#bHint .hl{display:none}#bar{flex-wrap:nowrap;gap:6px;padding-left:10px;padding-right:10px}#bar .btn{padding:9px 8px;font-size:14px;flex:1 1 auto;min-width:0;white-space:nowrap}#bHint{flex:0 0 auto!important;margin-left:0;padding:9px 11px!important}}
 .card{width:var(--cw);height:calc(var(--cw)*1.42);background:var(--ivory);color:var(--ink);border:0;border-radius:calc(var(--cw)*.11);box-shadow:0 1px 3px rgba(0,0,0,.45),inset 0 0 0 1px rgba(0,0,0,.12);position:relative;display:inline-block;flex:none;padding:0;transition:transform .12s}
 .card.red{color:var(--red)}
-.card .rk{position:absolute;left:9%;top:5%;font:700 calc(var(--cw)*.36)/1 var(--display);letter-spacing:-.03em}
+.card .rk{position:absolute;left:9%;top:6%;font:700 calc(var(--cw)*.36)/1 var(--body);letter-spacing:-.04em}
 .card .su{position:absolute;left:8%;top:40%;font-size:calc(var(--cw)*.42);line-height:1}
 .card.joker{color:#6b3fa0}
 .card.joker .rk{font-size:calc(var(--cw)*.46)}
@@ -141,24 +141,29 @@ header h1{font:700 19px var(--display);margin:0;letter-spacing:.02em}
   #center{grid-column:1;display:block;overflow-y:auto;border-radius:16px;padding:6px}
   #table{display:block;overflow:visible;min-height:0;padding:0}
   .meld{display:inline-flex;vertical-align:top;margin:0 5px 5px 0;padding:3px 4px;border-radius:7px}
-  .card.sm{--cw:27px}
-  .card.sm .rk{font-size:calc(var(--cw)*.46);top:4%}
-  .card.sm .su{font-size:calc(var(--cw)*.46);top:46%}
-  .card.sm .jk{font-size:8px;bottom:3%;left:5%}
+  .card.sm{--cw:36px}
+  .card.sm .rk{font-size:calc(var(--cw)*.44);top:5%}
+  .card.sm .su{font-size:calc(var(--cw)*.44);top:47%}
+  .card.sm .jk{font-size:9px;bottom:3%;left:5%}
   .meld .card+.card{margin-left:calc(var(--cw)*-.44)}
   .empty{font-size:13px;margin:6px 0;text-align:left}
   #mid{padding:2px 12px;gap:8px}
   #piles{gap:4px}
   .pile{padding:2px}
-  .pile .card{--cw:38px}
+  .pile .card{--cw:48px}
   .cap{font-size:10px}
   #status{font-size:12.5px;line-height:1.3;min-height:2.6em}
   #merow{margin:0 12px;gap:5px}
   #merow .btn.sm{white-space:nowrap;padding:4px 7px;font-size:12px}
   #me{padding:3px 8px;gap:3px 7px;font-size:12px}
   #me .nm{font-size:14px}
-  #hand{padding:14px 12px 6px;padding-right:calc(12px + var(--cw)*.52);gap:10px 0}
-  #hand .card{margin-right:calc(var(--cw)*-.52)}
+  /* рука: крупные карты в один ряд, шаг между ними подбирает скрипт под число карт */
+  #hand{--cw:58px;flex-wrap:nowrap;padding:14px 12px 6px;gap:10px 0}
+  #hand.wrap{flex-wrap:wrap}
+  #hand .card{margin-right:calc(var(--step,30px) - var(--cw))}
+  #hand .card:last-child{margin-right:0}
+  #hand .card .rk{font-size:min(calc(var(--cw)*.36),calc(var(--step,30px)*.84))}
+  #hand .card .rk.ten{letter-spacing:-.12em}
   header{flex-wrap:nowrap}
   #deal{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #bar{flex-wrap:nowrap;gap:6px;padding:4px 12px 10px}
@@ -172,6 +177,9 @@ header h1{font:700 19px var(--display);margin:0;letter-spacing:.02em}
   #deal{font-size:12px}
   header .btn.sm{padding:4px 6px;font-size:12px}
 }
+/* внутри Telegram на весь экран: не залезать под строку состояния, кнопки Telegram и нижнюю полоску */
+html.tg #app,html.tg #score,html.tg #modal{padding-top:calc(var(--tg-safe-area-inset-top,0px) + var(--tg-content-safe-area-inset-top,0px));padding-bottom:var(--tg-safe-area-inset-bottom,0px)}
+html.tg #modal{padding-top:calc(16px + var(--tg-safe-area-inset-top,0px) + var(--tg-content-safe-area-inset-top,0px));padding-bottom:calc(16px + var(--tg-safe-area-inset-bottom,0px))}
 #modal{position:fixed;top:0;right:0;bottom:0;left:0;inset:0;background:rgba(6,18,15,.72);display:grid;place-items:center;padding:16px;z-index:5}
 #modal[hidden]{display:none}
 .sheet{background:var(--ivory);color:var(--ink);border-radius:14px;padding:18px;width:min(640px,100%);max-height:100%;overflow-y:auto}

@@ -59,7 +59,7 @@
     const a = tag === 'button' ? ` data-act="card" data-id="${c.id}"` : '';
     if (E.isJ(c)) return `<${tag} class="card joker ${cls || ''}"${a} aria-label="${tr('joker')}"><span class="rk">★</span><span class="jk">${sub || tr('joker')}</span></${tag}>`;
     const red = c.s === 1 || c.s === 2;
-    return `<${tag} class="card ${red ? 'red' : ''} ${cls || ''}"${a} aria-label="${lbl(c)}"><span class="rk">${E.RANKS[c.r]}</span><span class="su">${E.SUITS[c.s]}</span></${tag}>`;
+    return `<${tag} class="card ${red ? 'red' : ''} ${cls || ''}"${a} aria-label="${lbl(c)}"><span class="rk${c.r === 10 ? ' ten' : ''}">${E.RANKS[c.r]}</span><span class="su">${E.SUITS[c.s]}</span></${tag}>`;
   }
   function jokerSub(m) {
     const j = E.jokerMeaning(m); if (!j) return '';
@@ -154,7 +154,21 @@
   function renderHand() {
     const t = st.turn, myTurn = st.phase === 'play' && t.p === ME;
     $('hand').innerHTML = myHand().map(c => cardHTML(c, 'button', (sel.has(c.id) ? 'sel ' : '') + (myTurn && t.drew === c.id ? 'new ' : '') + (drag && drag.on && drag.id === c.id ? 'drag' : ''))).join('');
+    fitHand();
   }
+  // на телефоне рука идёт одним рядом: чем меньше карт, тем шире шаг между ними
+  function fitHand() {
+    const el = $('hand'), n = el.children.length;
+    if (!narrow.matches || n < 2) { el.style.removeProperty('--step'); el.classList.remove('wrap'); return; }
+    const cs = getComputedStyle(el), cw = parseFloat(cs.getPropertyValue('--cw')) || 58;
+    const room = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    let step = Math.min(cw * 0.8, (room - cw) / (n - 1));
+    const wrap = step < 19;                        // карт слишком много для одного ряда — переносим на второй
+    if (wrap) step = Math.min(cw * 0.8, (room - cw) / (Math.ceil(n / 2) - 1));
+    el.classList.toggle('wrap', wrap);
+    el.style.setProperty('--step', Math.floor(step) + 'px');
+  }
+  window.addEventListener('resize', () => { if (st) fitHand(); });
   // перетаскивание карт в руке: порядок меняется сразу, пока тянете
   let drag = null, dragEnd = 0;
   $('hand').addEventListener('pointerdown', ev => {
