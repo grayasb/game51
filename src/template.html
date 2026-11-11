@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Игра 51</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;700&family=PT+Serif:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Один мир: сукно карточного стола. Раскладка — колонка: соперники, стол, колоды, рука. */
+  --felt:#1d5546; --felt-deep:#143d33; --rim:#0f2a24;
+  --ivory:#fbf6e9; --ink:#1b1b1f; --red:#b9302a; --gold:#e3b24c; --mist:#bcd3c9; --bad:#ffb4a8;
+  --display:"PT Serif",Georgia,serif; --body:"Golos Text","Segoe UI",system-ui,sans-serif;
+  --cw:clamp(42px,11.6vw,64px);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overscroll-behavior:none}
+body{background:var(--rim);color:var(--ivory);font:15px/1.4 var(--body);-webkit-tap-highlight-color:transparent;display:flex;justify-content:center}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+#oops{position:fixed;left:0;right:0;top:0;z-index:9;background:#ffb4a8;color:#3a0d08;padding:10px 14px;font:14px/1.35 system-ui,sans-serif;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#oops[hidden]{display:none}
+#oops span{flex:1;min-width:200px;overflow-wrap:anywhere}
+#oops button{background:#3a0d08;color:#fff;border:0;border-radius:8px;padding:8px 12px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+#app{height:100%;max-width:980px;flex:1 1 auto;min-width:0;display:flex;flex-direction:column;background:radial-gradient(120% 80% at 50% 35%,var(--felt) 0%,var(--felt-deep) 100%)}
+header{display:flex;align-items:center;gap:6px;padding:8px 16px;background:var(--rim);flex-wrap:wrap}
+header h1{font:700 19px var(--display);margin:0;letter-spacing:.02em}
+#deal{color:var(--mist);margin-right:auto;font-variant-numeric:tabular-nums}
+.btn{background:var(--gold);color:#2a1f08;border:0;border-radius:8px;padding:9px 14px;font-weight:700;min-height:40px}
+.btn.ghost{background:transparent;color:var(--ivory);box-shadow:inset 0 0 0 1px rgba(251,246,233,.35);font-weight:500}
+.btn.sm{padding:6px 10px;min-height:34px;font-size:14px}
+.btn:disabled{opacity:.38;cursor:default}
+#arena{flex:1 1 0;min-height:250px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr);gap:8px;padding:4px 16px}
+#topSeats{grid-column:1/4;display:flex;justify-content:space-around;gap:8px}
+#leftSeat{grid-column:1;grid-row:2;align-self:center}
+#rightSeat{grid-column:3;grid-row:2;align-self:center}
+#center{grid-column:2;grid-row:2;min-height:0;display:flex;flex-direction:column;gap:4px;background:rgba(0,0,0,.14);border-radius:40px;box-shadow:inset 0 0 0 2px rgba(227,178,76,.28);padding:10px 12px;overflow:hidden}
+.seat{width:clamp(86px,23vw,180px);background:rgba(0,0,0,.22);border-radius:10px;padding:5px 8px;border:2px solid transparent}
+.backs{display:flex;align-items:center;margin:3px 0;padding-left:6px}
+.backs i{width:12px;height:17px;flex:none;margin-left:-6px;border-radius:2px;background:#8a2c37;box-shadow:inset 0 0 0 1px var(--ivory),0 0 1px rgba(0,0,0,.6)}
+.backs b{margin-left:5px;font-size:13px;font-variant-numeric:tabular-nums}
+
+.seat.active,#me.active{border-color:var(--gold)}
+.nm{font-weight:700}
+.dl{font-weight:400;font-size:12px;color:var(--mist)}
+.meta{display:flex;gap:4px 10px;flex-wrap:wrap;font-size:13px;color:var(--mist);align-items:center;font-variant-numeric:tabular-nums}
+.meta b,#me b{color:var(--ivory)}
+.pill{font-size:12px;border-radius:99px;padding:1px 8px;background:rgba(0,0,0,.3);color:var(--mist);white-space:nowrap}
+.pill.open{background:var(--gold);color:#2a1f08}
+.pill.warn{background:var(--bad);color:#3a0d08}
+#log{padding:4px 16px 0;font-size:13px;color:var(--mist);min-height:40px;display:flex;flex-direction:column;justify-content:flex-end}
+#log div:last-child{color:var(--ivory)}
+#table{flex:1 1 0;min-height:60px;overflow-y:auto;padding:4px;display:flex;flex-wrap:wrap;gap:8px 10px;align-content:flex-start;justify-content:center}
+.empty{margin:auto;color:var(--mist);text-align:center;max-width:34ch}
+.meld{background:rgba(0,0,0,.18);border:0;border-radius:10px;padding:5px 7px;display:flex}
+.meld:hover{background:rgba(227,178,76,.28)}
+.meld.fit{background:rgba(227,178,76,.45);box-shadow:0 0 0 3px var(--gold),0 0 18px rgba(227,178,76,.8);animation:fitPulse 1.2s ease-in-out infinite alternate}
+@keyframes fitPulse{from{box-shadow:0 0 0 2px var(--gold),0 0 8px rgba(227,178,76,.5)}to{box-shadow:0 0 0 3px var(--gold),0 0 20px rgba(227,178,76,.9)}}
+@media (prefers-reduced-motion:reduce){.meld.fit{animation:none}}
+#bHint{margin-left:auto}
+#beta{background:var(--gold);color:#2a1f08;text-align:center;font-size:13px;font-weight:700;padding:4px 12px;letter-spacing:.01em}
+@media (max-width:480px){#bHint .hl{display:none}#bar{flex-wrap:nowrap;gap:6px;padding-left:10px;padding-right:10px}#bar .btn{padding:9px 8px;font-size:14px;flex:1 1 auto;min-width:0;white-space:nowrap}#bHint{flex:0 0 auto!important;margin-left:0;padding:9px 11px!important}}
+.card{width:var(--cw);height:calc(var(--cw)*1.42);background:var(--ivory);color:var(--ink);border:0;border-radius:calc(var(--cw)*.11);box-shadow:0 1px 3px rgba(0,0,0,.45),inset 0 0 0 1px rgba(0,0,0,.12);position:relative;display:inline-block;flex:none;padding:0;transition:transform .12s}
+.card.red{color:var(--red)}
+.card .rk{position:absolute;left:9%;top:5%;font:700 calc(var(--cw)*.36)/1 var(--display);letter-spacing:-.03em}
+.card .su{position:absolute;left:8%;top:40%;font-size:calc(var(--cw)*.42);line-height:1}
+.card.joker{color:#6b3fa0}
+.card.joker .rk{font-size:calc(var(--cw)*.46)}
+.card .jk{position:absolute;left:7%;right:0;bottom:8%;text-align:left;white-space:nowrap;font:700 calc(var(--cw)*.19)/1 var(--body)}
+.card.sm{--cw:clamp(32px,8.6vw,46px)}
+.meld .card+.card{margin-left:calc(var(--cw)*-.42)}
+.card.back{background:repeating-linear-gradient(45deg,#7a2530 0 6px,#8f2f3a 6px 12px);box-shadow:0 1px 3px rgba(0,0,0,.45),inset 0 0 0 3px var(--ivory)}
+.card.none{background:rgba(0,0,0,.2);box-shadow:inset 0 0 0 2px rgba(251,246,233,.25)}
+.cntb{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;display:grid;place-items:center;color:var(--ivory);font:700 calc(var(--cw)*.36) var(--body);font-variant-numeric:tabular-nums}
+#mid{display:flex;gap:14px;align-items:center;padding:4px 16px}
+#piles{display:flex;gap:10px;flex:none}
+.pile .card{--cw:clamp(40px,6vw,56px)}
+.pile{background:none;border:0;padding:4px;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.pile:disabled{cursor:default;opacity:1}
+.pile.hot .card{box-shadow:0 0 0 3px var(--gold),0 2px 8px rgba(0,0,0,.5)}
+.cap{font-size:12px;color:var(--mist)}
+#status{flex:1;min-width:0;margin:0;font-size:14px;min-height:2.8em;display:flex;align-items:center}
+#status.err{color:var(--bad)}
+#merow{display:flex;gap:8px;align-items:stretch;margin:0 16px}
+#me{flex:1;display:flex;gap:6px 10px;align-items:center;flex-wrap:wrap;padding:5px 10px;background:rgba(0,0,0,.22);border-radius:10px;border:2px solid transparent;font-size:13px;color:var(--mist);font-variant-numeric:tabular-nums}
+#me .nm{font-size:15px;color:var(--ivory)}
+.nmb{background:none;border:0;padding:0;margin:0;color:inherit;font:inherit;font-weight:700;text-align:left;cursor:pointer}
+.nmb::after{content:' ✎';opacity:.55;font-weight:400;font-size:.85em}
+.nmb:hover{text-decoration:underline}
+.names label{margin-top:8px}
+#hand{display:flex;flex-wrap:wrap;gap:12px 0;padding:16px 16px 8px;padding-right:calc(16px + var(--cw)*.3)}
+#hand .card{margin-right:calc(var(--cw)*-.3);touch-action:none;user-select:none;-webkit-user-select:none}
+#hand .card.drag{transform:translateY(-14px) scale(1.07);box-shadow:0 0 0 3px var(--mist),0 10px 16px rgba(0,0,0,.55);z-index:2}
+#hand .card.sel{transform:translateY(-10px);box-shadow:0 0 0 3px var(--gold),0 6px 10px rgba(0,0,0,.5)}
+#hand .card.new::after{content:"";position:absolute;right:8%;top:6%;width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 1px #2a1f08}
+#bar{display:flex;gap:8px;padding:6px 16px 14px;flex-wrap:wrap;align-items:center}
+#bar .sp{flex:1}
+#score{flex:none;width:300px;height:100%;overflow-y:auto;background:var(--rim);padding:12px 14px;border-left:1px solid rgba(251,246,233,.14)}
+#score.closed{display:none}
+#score .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+#score h2{font:700 18px var(--display);margin:0}
+#score table{table-layout:fixed;font-size:14px}
+#score th,#score td{border-bottom-color:rgba(251,246,233,.13);padding:6px 4px}
+#score th{color:var(--mist);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:none;letter-spacing:0;font-size:12px}
+#score .dn{width:22px;color:var(--mist);text-align:left}
+#score tr.cur td{background:rgba(251,246,233,.07)}
+#score td.winc{color:#7fd6a8}
+#score td.lead b{color:var(--gold)}
+#score tr.sum td{border-top:2px solid var(--mist);border-bottom:0}
+#score .note{color:var(--mist);font-size:12px}
+@media (max-width:1279px){
+  #score{position:fixed;top:0;right:0;bottom:0;z-index:4;width:min(86vw,300px);box-shadow:-10px 0 28px rgba(0,0,0,.55);transition:transform .2s,visibility .2s}
+  #score.closed{display:block;transform:translateX(105%);visibility:hidden}
+}
+@media (prefers-reduced-motion:reduce){#score{transition:none}}
+.tot{display:none;margin-left:auto;font-variant-numeric:tabular-nums}
+@media (max-width:600px){
+  /* телефон: соперники одним рядом сверху, весь стол под комбинации, колода и сброс у руки, рука в один ряд */
+  header{padding:6px 12px;gap:4px}
+  header h1{font-size:17px}
+  #deal{font-size:13px}
+  .btn.sm{padding:5px 8px;min-height:32px;font-size:13px}
+  #beta{font-size:11px;padding:2px 12px}
+  #log{min-height:34px;font-size:12px;padding:2px 12px 0}
+  #arena{grid-template-columns:minmax(0,1fr);gap:4px;padding:2px 12px;min-height:150px}
+  #topSeats{grid-column:1;gap:4px;justify-content:stretch}
+  #leftSeat,#rightSeat{display:none}
+  .seat{flex:1 1 0;min-width:0;width:auto;padding:3px 5px;font-size:12px}
+  .seat .nm{display:flex;gap:4px;align-items:baseline}
+  .seat .nmb{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .seat .nmb::after{content:none}
+  .seat .meta span:not(.pill){display:none}
+  .seat .dl{font-size:10px}
+  .tot{display:inline}
+  .pill{font-size:10px;padding:0 5px}
+  .backs{padding-left:6px;margin:2px 0}
+  .backs i{width:8px;height:12px;margin-left:-5.6px}
+  .backs b{font-size:12px;margin-left:4px}
+  #center{grid-column:1;display:block;overflow-y:auto;border-radius:16px;padding:6px}
+  #table{display:block;overflow:visible;min-height:0;padding:0}
+  .meld{display:inline-flex;vertical-align:top;margin:0 5px 5px 0;padding:3px 4px;border-radius:7px}
+  .card.sm{--cw:27px}
+  .card.sm .rk{font-size:calc(var(--cw)*.46);top:4%}
+  .card.sm .su{font-size:calc(var(--cw)*.46);top:46%}
+  .card.sm .jk{font-size:8px;bottom:3%;left:5%}
+  .meld .card+.card{margin-left:calc(var(--cw)*-.44)}
+  .empty{font-size:13px;margin:6px 0;text-align:left}
+  #mid{padding:2px 12px;gap:8px}
+  #piles{gap:4px}
+  .pile{padding:2px}
+  .pile .card{--cw:38px}
+  .cap{font-size:10px}
+  #status{font-size:12.5px;line-height:1.3;min-height:2.6em}
+  #merow{margin:0 12px;gap:5px}
+  #merow .btn.sm{white-space:nowrap;padding:4px 7px;font-size:12px}
+  #me{padding:3px 8px;gap:3px 7px;font-size:12px}
+  #me .nm{font-size:14px}
+  #hand{padding:14px 12px 6px;padding-right:calc(12px + var(--cw)*.52);gap:10px 0}
+  #hand .card{margin-right:calc(var(--cw)*-.52)}
+  header{flex-wrap:nowrap}
+  #deal{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #bar{flex-wrap:nowrap;gap:6px;padding:4px 12px 10px}
+  #bar .btn{padding:9px 8px;font-size:14px;flex:1 1 auto;min-width:0;white-space:nowrap}
+  #bar #bHint{flex:0 0 auto;margin-left:0;padding:9px 11px}
+  #bHint .hl{display:none}
+}
+@media (max-width:380px){
+  header{padding:6px 10px;gap:3px}
+  header h1{font-size:15px}
+  #deal{font-size:12px}
+  header .btn.sm{padding:4px 6px;font-size:12px}
+}
+#modal{position:fixed;top:0;right:0;bottom:0;left:0;inset:0;background:rgba(6,18,15,.72);display:grid;place-items:center;padding:16px;z-index:5}
+#modal[hidden]{display:none}
+.sheet{background:var(--ivory);color:var(--ink);border-radius:14px;padding:18px;width:min(640px,100%);max-height:100%;overflow-y:auto}
+.sheet h2{font:700 20px/1.25 var(--display);margin:0 0 10px;text-wrap:balance}
+.sheet h3{font:700 15px var(--body);margin:14px 0 4px}
+.sheet p,.sheet li{max-width:65ch}
+.sheet ul{margin:4px 0;padding-left:20px}
+.sheet .credit{margin:16px 0 0;font-style:italic;color:#4b4f55}
+.sheet .btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px rgba(27,27,31,.4)}
+.sheet .btn{background:var(--felt);color:var(--ivory)}
+.row{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.opts{display:flex;flex-direction:column;gap:8px}
+.note{color:#5b5a52;font-size:14px;margin:6px 0}
+.final{font-size:16px;margin:12px 0 0}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid rgba(27,27,31,.14);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#5b5a52}
+.num{text-align:right;white-space:nowrap}
+tr.win td{background:rgba(227,178,76,.3)}
+td.winc{color:var(--felt);font-weight:700}
+tr.sum td{border-bottom:0;border-top:2px solid var(--ink)}
+.rest{font-size:13px;color:#44433d}
+label{display:block;font-weight:500;margin:10px 0 4px}
+input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1px solid rgba(27,27,31,.4);background:#fff;color:var(--ink)}
+@media (prefers-reduced-motion:reduce){.card{transition:none}}
+</style>
+</head>
+<body>
+<div id="oops" hidden><span id="oopsText"></span><button type="button" id="oopsReset">Начать заново / Restart</button></div>
+<script>
+// Если что-то сломалось — показать ошибку и дать начать заново (сохранённая партия стирается).
+(function () {
+  function show(msg) {
+    var b = document.getElementById('oops'); if (!b) return;
+    document.getElementById('oopsText').textContent = 'Ошибка / Error: ' + msg;
+    b.hidden = false;
+  }
+  window.addEventListener('error', function (e) { show((e.message || 'unknown') + (e.lineno ? ' (' + e.lineno + ')' : '')); });
+  window.addEventListener('unhandledrejection', function (e) { show(String(e.reason)); });
+  document.addEventListener('click', function (e) {
+    if (e.target && e.target.id === 'oopsReset') { try { localStorage.removeItem('game51-v1'); } catch (x) { /* нет памяти */ } location.reload(); }
+  });
+})();
+</script>
+<div id="app">
+  <div id="beta" data-i18n="beta">Тестовая версия, возможны ошибки</div>
+  <header>
+    <h1>51</h1><span id="deal"></span>
+    <button class="btn ghost sm" id="bScore" data-act="toggleScore" aria-controls="score" data-i18n="h_score">Счёт</button>
+    <button class="btn ghost sm" data-act="rules" data-i18n="h_rules">Правила</button>
+    <button class="btn ghost sm" data-act="new" data-i18n="h_new">Новая</button>
+    <button class="btn ghost sm" id="bLang" data-act="lang" data-i18n="langBtn">EN</button>
+  </header>
+  <div id="log" aria-live="polite"></div>
+  <div id="arena">
+    <div id="topSeats"></div>
+    <div id="leftSeat"></div>
+    <div id="center"><div id="table"></div></div>
+    <div id="rightSeat"></div>
+  </div>
+  <div id="mid"><p id="status" aria-live="polite"></p><div id="piles"></div></div>
+  <div id="merow"><div id="me"></div><button class="btn ghost sm" data-act="sortS" data-i18n="b_sortS">По мастям</button><button class="btn ghost sm" data-act="sortR" data-i18n="b_sortR">По рангу</button></div>
+  <div id="hand"></div>
+  <div id="bar">
+    <button class="btn" id="bMeld" data-act="bMeld" data-i18n="b_meld">Выложить</button>
+    <button class="btn" id="bDisc" data-act="bDisc" data-i18n="b_disc">Сбросить</button>
+    <button class="btn ghost" id="bUndo" data-act="bUndo" data-i18n="b_undo">Отменить ход</button>
+    <button class="btn ghost" id="bHint" data-act="bHint" title="Подсказка / Hint" aria-label="Подсказка / Hint">💡<span class="hl"> <span data-i18n="b_hint">Подсказка</span></span></button>
+  </div>
+</div>
+<aside id="score" class="closed"></aside>
+<div id="modal" hidden></div>
+<template id="rules-ru">
+  <h2>Правила</h2>
+  <h3>Колода и ход</h3>
+  <ul>
+    <li>108 карт: две колоды и 4 джокера. Каждому по 14 карт, одна карта открывается в сброс.</li>
+    <li>Ход: взять карту, по желанию выложить, одну карту сбросить. Ходы идут по часовой стрелке.</li>
+    <li>Из сброса можно взять верхнюю карту, только если она в этот же ход ложится на стол.</li>
+    <li>Когда колода кончается, сброс переворачивается без перемешивания.</li>
+    <li>Если у кого-то после раздачи три пары одинаковых карт (та же масть и достоинство, джокеры не считаются) — сразу пересдача, сдаёт следующий. Пересдача не считается раздачей.</li>
+  </ul>
+  <h3>Комбинации</h3>
+  <ul>
+    <li>Группа: 3–4 карты одного достоинства разных мастей.</li>
+    <li>Ряд: от 3 карт подряд одной масти. Туз стоит перед двойкой или после короля, через угол нельзя.</li>
+    <li>Джокер (★) заменяет любую карту, в комбинации не больше одного.</li>
+    <li>Очки: 2–10 по номиналу, валет, дама, король и туз по 10. Джокер на столе стоит как карта, которую заменяет.</li>
+  </ul>
+  <h3>Открытие</h3>
+  <ul>
+    <li>Первая выкладка — не меньше 51 очка за ход. Нужна хотя бы одна своя комбинация, остальное можно доложить к чужим, всё идёт в счёт.</li>
+    <li>После открытия можно докладывать к любым комбинациям. Разбивать комбинации нельзя.</li>
+    <li>Полная комбинация без джокера уходит со стола в сброс, взять из неё карты нельзя, сброс игрока ложится поверх: группа из четырёх мастей, ряд от туза до короля или от двойки до туза.</li>
+  </ul>
+  <h3>Джокер со стола</h3>
+  <ul>
+    <li>В ряду: положите карту, которую он заменяет, и заберите джокер.</li>
+    <li>В группе: джокер забирается, когда доложены все недостающие масти.</li>
+    <li>Забрать джокер может любой игрок в свой ход.</li>
+  </ul>
+  <h3>Подсчёт</h3>
+  <ul>
+    <li>Раздача кончается, когда игрок выложил всё и сбросил последнюю карту.</li>
+    <li>Победителю −20, а за выход в один ход −40.</li>
+    <li>Открывшимся — сумма карт на руке, джокер 15. Не открывшимся — 100.</li>
+    <li>Выход в один ход: штрафы остальных ×2 без джокеров, ×1,5 с одним джокером (округление вниз), с двумя и больше без коэффициента.</li>
+    <li>Партия — 9 раздач, побеждает меньшая сумма.</li>
+  </ul>
+  <p class="credit">Играем по правилам Осамы Шараф, адаптировано Сергеем Завистовским.</p>
+</template>
+<template id="rules-en">
+  <h2>Rules</h2>
+  <h3>Deck and turn</h3>
+  <ul>
+    <li>108 cards: two decks plus 4 jokers. Each player gets 14 cards, and one card is turned up to start the discard pile.</li>
+    <li>A turn: draw a card, lay down cards if you wish, discard one card. Play goes clockwise.</li>
+    <li>You may take the top discard only if you lay it on the table in the same turn.</li>
+    <li>When the deck runs out, the discard pile is turned over without shuffling.</li>
+    <li>If anyone is dealt three pairs of identical cards (same suit and rank; jokers don't count), the cards are redealt at once and the next player deals. A redeal does not count as a deal.</li>
+  </ul>
+  <h3>Combinations</h3>
+  <ul>
+    <li>Set: 3–4 cards of the same rank in different suits.</li>
+    <li>Run: 3 or more consecutive cards of one suit. The ace goes before the two or after the king, never around the corner.</li>
+    <li>A joker (★) stands for any card; at most one per combination.</li>
+    <li>Points: 2–10 at face value; jack, queen, king and ace are 10 each. A joker on the table is worth the card it replaces.</li>
+  </ul>
+  <h3>Opening</h3>
+  <ul>
+    <li>Your first lay-down must total at least 51 points in one turn. You need at least one combination of your own; the rest may be added to other players' combinations, and it all counts.</li>
+    <li>After opening you may add cards to any combination. Combinations cannot be broken up.</li>
+    <li>A complete combination without a joker leaves the table for the discard pile, its cards cannot be taken, and the player's discard goes on top: a set of all four suits, or a run from ace to king or from two to ace.</li>
+  </ul>
+  <h3>Taking a joker from the table</h3>
+  <ul>
+    <li>In a run: lay the card the joker replaces and take the joker.</li>
+    <li>In a set: the joker is taken once all the missing suits have been added.</li>
+    <li>Any player may take a joker on their own turn.</li>
+  </ul>
+  <h3>Scoring</h3>
+  <ul>
+    <li>A deal ends when a player has laid down everything and discarded the last card.</li>
+    <li>The winner scores −20, or −40 for going out in a single turn.</li>
+    <li>Players who opened score the sum of the cards left in hand, a joker counting 15. Players who did not open score 100.</li>
+    <li>Going out in a single turn multiplies the others' penalties: ×2 with no jokers, ×1.5 with one joker (rounded down), no multiplier with two or more.</li>
+    <li>A game is 9 deals; the lowest total wins.</li>
+  </ul>
+  <p class="credit">We play by Osama Sharaf’s rules, adapted by Sergey Zavistovsky.</p>
+</template>
+<script>/*@telegram*/</script>
+<script>/*@i18n*/</script>
+<script>/*@engine*/</script>
+<script>/*@bots*/</script>
+<script>/*@hint*/</script>
+<script>/*@ui*/</script>
+</body>
+</html>

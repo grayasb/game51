@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Игра 51</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;700&family=PT+Serif:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Один мир: сукно карточного стола. Раскладка — колонка: соперники, стол, колоды, рука. */
+  --felt:#1d5546; --felt-deep:#143d33; --rim:#0f2a24;
+  --ivory:#fbf6e9; --ink:#1b1b1f; --red:#b9302a; --gold:#e3b24c; --mist:#bcd3c9; --bad:#ffb4a8;
+  --display:"PT Serif",Georgia,serif; --body:"Golos Text","Segoe UI",system-ui,sans-serif;
+  --cw:clamp(42px,11.6vw,64px);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overscroll-behavior:none}
+body{background:var(--rim);color:var(--ivory);font:15px/1.4 var(--body);-webkit-tap-highlight-color:transparent;display:flex;justify-content:center}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+#oops{position:fixed;left:0;right:0;top:0;z-index:9;background:#ffb4a8;color:#3a0d08;padding:10px 14px;font:14px/1.35 system-ui,sans-serif;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#oops[hidden]{display:none}
+#oops span{flex:1;min-width:200px;overflow-wrap:anywhere}
+#oops button{background:#3a0d08;color:#fff;border:0;border-radius:8px;padding:8px 12px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+#app{height:100%;max-width:980px;flex:1 1 auto;min-width:0;display:flex;flex-direction:column;background:radial-gradient(120% 80% at 50% 35%,var(--felt) 0%,var(--felt-deep) 100%)}
+header{display:flex;align-items:center;gap:6px;padding:8px 16px;background:var(--rim);flex-wrap:wrap}
+header h1{font:700 19px var(--display);margin:0;letter-spacing:.02em}
+#deal{color:var(--mist);margin-right:auto;font-variant-numeric:tabular-nums}
+.btn{background:var(--gold);color:#2a1f08;border:0;border-radius:8px;padding:9px 14px;font-weight:700;min-height:40px}
+.btn.ghost{background:transparent;color:var(--ivory);box-shadow:inset 0 0 0 1px rgba(251,246,233,.35);font-weight:500}
+.btn.sm{padding:6px 10px;min-height:34px;font-size:14px}
+.btn:disabled{opacity:.38;cursor:default}
+#arena{flex:1 1 0;min-height:250px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr);gap:8px;padding:4px 16px}
+#topSeats{grid-column:1/4;display:flex;justify-content:space-around;gap:8px}
+#leftSeat{grid-column:1;grid-row:2;align-self:center}
+#rightSeat{grid-column:3;grid-row:2;align-self:center}
+#center{grid-column:2;grid-row:2;min-height:0;display:flex;flex-direction:column;gap:4px;background:rgba(0,0,0,.14);border-radius:40px;box-shadow:inset 0 0 0 2px rgba(227,178,76,.28);padding:10px 12px;overflow:hidden}
+.seat{width:clamp(86px,23vw,180px);background:rgba(0,0,0,.22);border-radius:10px;padding:5px 8px;border:2px solid transparent}
+.backs{display:flex;align-items:center;margin:3px 0;padding-left:6px}
+.backs i{width:12px;height:17px;flex:none;margin-left:-6px;border-radius:2px;background:#8a2c37;box-shadow:inset 0 0 0 1px var(--ivory),0 0 1px rgba(0,0,0,.6)}
+.backs b{margin-left:5px;font-size:13px;font-variant-numeric:tabular-nums}
+
+.seat.active,#me.active{border-color:var(--gold)}
+.nm{font-weight:700}
+.dl{font-weight:400;font-size:12px;color:var(--mist)}
+.meta{display:flex;gap:4px 10px;flex-wrap:wrap;font-size:13px;color:var(--mist);align-items:center;font-variant-numeric:tabular-nums}
+.meta b,#me b{color:var(--ivory)}
+.pill{font-size:12px;border-radius:99px;padding:1px 8px;background:rgba(0,0,0,.3);color:var(--mist);white-space:nowrap}
+.pill.open{background:var(--gold);color:#2a1f08}
+.pill.warn{background:var(--bad);color:#3a0d08}
+#log{padding:4px 16px 0;font-size:13px;color:var(--mist);min-height:40px;display:flex;flex-direction:column;justify-content:flex-end}
+#log div:last-child{color:var(--ivory)}
+#table{flex:1 1 0;min-height:60px;overflow-y:auto;padding:4px;display:flex;flex-wrap:wrap;gap:8px 10px;align-content:flex-start;justify-content:center}
+.empty{margin:auto;color:var(--mist);text-align:center;max-width:34ch}
+.meld{background:rgba(0,0,0,.18);border:0;border-radius:10px;padding:5px 7px;display:flex}
+.meld:hover{background:rgba(227,178,76,.28)}
+.meld.fit{background:rgba(227,178,76,.45);box-shadow:0 0 0 3px var(--gold),0 0 18px rgba(227,178,76,.8);animation:fitPulse 1.2s ease-in-out infinite alternate}
+@keyframes fitPulse{from{box-shadow:0 0 0 2px var(--gold),0 0 8px rgba(227,178,76,.5)}to{box-shadow:0 0 0 3px var(--gold),0 0 20px rgba(227,178,76,.9)}}
+@media (prefers-reduced-motion:reduce){.meld.fit{animation:none}}
+#bHint{margin-left:auto}
+#beta{background:var(--gold);color:#2a1f08;text-align:center;font-size:13px;font-weight:700;padding:4px 12px;letter-spacing:.01em}
+@media (max-width:480px){#bHint .hl{display:none}#bar{flex-wrap:nowrap;gap:6px;padding-left:10px;padding-right:10px}#bar .btn{padding:9px 8px;font-size:14px;flex:1 1 auto;min-width:0;white-space:nowrap}#bHint{flex:0 0 auto!important;margin-left:0;padding:9px 11px!important}}
+.card{width:var(--cw);height:calc(var(--cw)*1.42);background:var(--ivory);color:var(--ink);border:0;border-radius:calc(var(--cw)*.11);box-shadow:0 1px 3px rgba(0,0,0,.45),inset 0 0 0 1px rgba(0,0,0,.12);position:relative;display:inline-block;flex:none;padding:0;transition:transform .12s}
+.card.red{color:var(--red)}
+.card .rk{position:absolute;left:9%;top:5%;font:700 calc(var(--cw)*.36)/1 var(--display);letter-spacing:-.03em}
+.card .su{position:absolute;left:8%;top:40%;font-size:calc(var(--cw)*.42);line-height:1}
+.card.joker{color:#6b3fa0}
+.card.joker .rk{font-size:calc(var(--cw)*.46)}
+.card .jk{position:absolute;left:7%;right:0;bottom:8%;text-align:left;white-space:nowrap;font:700 calc(var(--cw)*.19)/1 var(--body)}
+.card.sm{--cw:clamp(32px,8.6vw,46px)}
+.meld .card+.card{margin-left:calc(var(--cw)*-.42)}
+.card.back{background:repeating-linear-gradient(45deg,#7a2530 0 6px,#8f2f3a 6px 12px);box-shadow:0 1px 3px rgba(0,0,0,.45),inset 0 0 0 3px var(--ivory)}
+.card.none{background:rgba(0,0,0,.2);box-shadow:inset 0 0 0 2px rgba(251,246,233,.25)}
+.cntb{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;display:grid;place-items:center;color:var(--ivory);font:700 calc(var(--cw)*.36) var(--body);font-variant-numeric:tabular-nums}
+#mid{display:flex;gap:14px;align-items:center;padding:4px 16px}
+#piles{display:flex;gap:10px;flex:none}
+.pile .card{--cw:clamp(40px,6vw,56px)}
+.pile{background:none;border:0;padding:4px;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.pile:disabled{cursor:default;opacity:1}
+.pile.hot .card{box-shadow:0 0 0 3px var(--gold),0 2px 8px rgba(0,0,0,.5)}
+.cap{font-size:12px;color:var(--mist)}
+#status{flex:1;min-width:0;margin:0;font-size:14px;min-height:2.8em;display:flex;align-items:center}
+#status.err{color:var(--bad)}
+#merow{display:flex;gap:8px;align-items:stretch;margin:0 16px}
+#me{flex:1;display:flex;gap:6px 10px;align-items:center;flex-wrap:wrap;padding:5px 10px;background:rgba(0,0,0,.22);border-radius:10px;border:2px solid transparent;font-size:13px;color:var(--mist);font-variant-numeric:tabular-nums}
+#me .nm{font-size:15px;color:var(--ivory)}
+.nmb{background:none;border:0;padding:0;margin:0;color:inherit;font:inherit;font-weight:700;text-align:left;cursor:pointer}
+.nmb::after{content:' ✎';opacity:.55;font-weight:400;font-size:.85em}
+.nmb:hover{text-decoration:underline}
+.names label{margin-top:8px}
+#hand{display:flex;flex-wrap:wrap;gap:12px 0;padding:16px 16px 8px;padding-right:calc(16px + var(--cw)*.3)}
+#hand .card{margin-right:calc(var(--cw)*-.3);touch-action:none;user-select:none;-webkit-user-select:none}
+#hand .card.drag{transform:translateY(-14px) scale(1.07);box-shadow:0 0 0 3px var(--mist),0 10px 16px rgba(0,0,0,.55);z-index:2}
+#hand .card.sel{transform:translateY(-10px);box-shadow:0 0 0 3px var(--gold),0 6px 10px rgba(0,0,0,.5)}
+#hand .card.new::after{content:"";position:absolute;right:8%;top:6%;width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 1px #2a1f08}
+#bar{display:flex;gap:8px;padding:6px 16px 14px;flex-wrap:wrap;align-items:center}
+#bar .sp{flex:1}
+#score{flex:none;width:300px;height:100%;overflow-y:auto;background:var(--rim);padding:12px 14px;border-left:1px solid rgba(251,246,233,.14)}
+#score.closed{display:none}
+#score .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+#score h2{font:700 18px var(--display);margin:0}
+#score table{table-layout:fixed;font-size:14px}
+#score th,#score td{border-bottom-color:rgba(251,246,233,.13);padding:6px 4px}
+#score th{color:var(--mist);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:none;letter-spacing:0;font-size:12px}
+#score .dn{width:22px;color:var(--mist);text-align:left}
+#score tr.cur td{background:rgba(251,246,233,.07)}
+#score td.winc{color:#7fd6a8}
+#score td.lead b{color:var(--gold)}
+#score tr.sum td{border-top:2px solid var(--mist);border-bottom:0}
+#score .note{color:var(--mist);font-size:12px}
+@media (max-width:1279px){
+  #score{position:fixed;top:0;right:0;bottom:0;z-index:4;width:min(86vw,300px);box-shadow:-10px 0 28px rgba(0,0,0,.55);transition:transform .2s,visibility .2s}
+  #score.closed{display:block;transform:translateX(105%);visibility:hidden}
+}
+@media (prefers-reduced-motion:reduce){#score{transition:none}}
+.tot{display:none;margin-left:auto;font-variant-numeric:tabular-nums}
+@media (max-width:600px){
+  /* телефон: соперники одним рядом сверху, весь стол под комбинации, колода и сброс у руки, рука в один ряд */
+  header{padding:6px 12px;gap:4px}
+  header h1{font-size:17px}
+  #deal{font-size:13px}
+  .btn.sm{padding:5px 8px;min-height:32px;font-size:13px}
+  #beta{font-size:11px;padding:2px 12px}
+  #log{min-height:34px;font-size:12px;padding:2px 12px 0}
+  #arena{grid-template-columns:minmax(0,1fr);gap:4px;padding:2px 12px;min-height:150px}
+  #topSeats{grid-column:1;gap:4px;justify-content:stretch}
+  #leftSeat,#rightSeat{display:none}
+  .seat{flex:1 1 0;min-width:0;width:auto;padding:3px 5px;font-size:12px}
+  .seat .nm{display:flex;gap:4px;align-items:baseline}
+  .seat .nmb{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .seat .nmb::after{content:none}
+  .seat .meta span:not(.pill){display:none}
+  .seat .dl{font-size:10px}
+  .tot{display:inline}
+  .pill{font-size:10px;padding:0 5px}
+  .backs{padding-left:6px;margin:2px 0}
+  .backs i{width:8px;height:12px;margin-left:-5.6px}
+  .backs b{font-size:12px;margin-left:4px}
+  #center{grid-column:1;display:block;overflow-y:auto;border-radius:16px;padding:6px}
+  #table{display:block;overflow:visible;min-height:0;padding:0}
+  .meld{display:inline-flex;vertical-align:top;margin:0 5px 5px 0;padding:3px 4px;border-radius:7px}
+  .card.sm{--cw:27px}
+  .card.sm .rk{font-size:calc(var(--cw)*.46);top:4%}
+  .card.sm .su{font-size:calc(var(--cw)*.46);top:46%}
+  .card.sm .jk{font-size:8px;bottom:3%;left:5%}
+  .meld .card+.card{margin-left:calc(var(--cw)*-.44)}
+  .empty{font-size:13px;margin:6px 0;text-align:left}
+  #mid{padding:2px 12px;gap:8px}
+  #piles{gap:4px}
+  .pile{padding:2px}
+  .pile .card{--cw:38px}
+  .cap{font-size:10px}
+  #status{font-size:12.5px;line-height:1.3;min-height:2.6em}
+  #merow{margin:0 12px;gap:5px}
+  #merow .btn.sm{white-space:nowrap;padding:4px 7px;font-size:12px}
+  #me{padding:3px 8px;gap:3px 7px;font-size:12px}
+  #me .nm{font-size:14px}
+  #hand{padding:14px 12px 6px;padding-right:calc(12px + var(--cw)*.52);gap:10px 0}
+  #hand .card{margin-right:calc(var(--cw)*-.52)}
+  header{flex-wrap:nowrap}
+  #deal{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #bar{flex-wrap:nowrap;gap:6px;padding:4px 12px 10px}
+  #bar .btn{padding:9px 8px;font-size:14px;flex:1 1 auto;min-width:0;white-space:nowrap}
+  #bar #bHint{flex:0 0 auto;margin-left:0;padding:9px 11px}
+  #bHint .hl{display:none}
+}
+@media (max-width:380px){
+  header{padding:6px 10px;gap:3px}
+  header h1{font-size:15px}
+  #deal{font-size:12px}
+  header .btn.sm{padding:4px 6px;font-size:12px}
+}
+#modal{position:fixed;top:0;right:0;bottom:0;left:0;inset:0;background:rgba(6,18,15,.72);display:grid;place-items:center;padding:16px;z-index:5}
+#modal[hidden]{display:none}
+.sheet{background:var(--ivory);color:var(--ink);border-radius:14px;padding:18px;width:min(640px,100%);max-height:100%;overflow-y:auto}
+.sheet h2{font:700 20px/1.25 var(--display);margin:0 0 10px;text-wrap:balance}
+.sheet h3{font:700 15px var(--body);margin:14px 0 4px}
+.sheet p,.sheet li{max-width:65ch}
+.sheet ul{margin:4px 0;padding-left:20px}
+.sheet .credit{margin:16px 0 0;font-style:italic;color:#4b4f55}
+.sheet .btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px rgba(27,27,31,.4)}
+.sheet .btn{background:var(--felt);color:var(--ivory)}
+.row{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.opts{display:flex;flex-direction:column;gap:8px}
+.note{color:#5b5a52;font-size:14px;margin:6px 0}
+.final{font-size:16px;margin:12px 0 0}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid rgba(27,27,31,.14);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#5b5a52}
+.num{text-align:right;white-space:nowrap}
+tr.win td{background:rgba(227,178,76,.3)}
+td.winc{color:var(--felt);font-weight:700}
+tr.sum td{border-bottom:0;border-top:2px solid var(--ink)}
+.rest{font-size:13px;color:#44433d}
+label{display:block;font-weight:500;margin:10px 0 4px}
+input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1px solid rgba(27,27,31,.4);background:#fff;color:var(--ink)}
+@media (prefers-reduced-motion:reduce){.card{transition:none}}
+</style>
+</head>
+<body>
+<div id="oops" hidden><span id="oopsText"></span><button type="button" id="oopsReset">Начать заново / Restart</button></div>
+<script>
+// Если что-то сломалось — показать ошибку и дать начать заново (сохранённая партия стирается).
+(function () {
+  function show(msg) {
+    var b = document.getElementById('oops'); if (!b) return;
+    document.getElementById('oopsText').textContent = 'Ошибка / Error: ' + msg;
+    b.hidden = false;
+  }
+  window.addEventListener('error', function (e) { show((e.message || 'unknown') + (e.lineno ? ' (' + e.lineno + ')' : '')); });
+  window.addEventListener('unhandledrejection', function (e) { show(String(e.reason)); });
+  document.addEventListener('click', function (e) {
+    if (e.target && e.target.id === 'oopsReset') { try { localStorage.removeItem('game51-v1'); } catch (x) { /* нет памяти */ } location.reload(); }
+  });
+})();
+</script>
+<div id="app">
+  <div id="beta" data-i18n="beta">Тестовая версия, возможны ошибки</div>
+  <header>
+    <h1>51</h1><span id="deal"></span>
+    <button class="btn ghost sm" id="bScore" data-act="toggleScore" aria-controls="score" data-i18n="h_score">Счёт</button>
+    <button class="btn ghost sm" data-act="rules" data-i18n="h_rules">Правила</button>
+    <button class="btn ghost sm" data-act="new" data-i18n="h_new">Новая</button>
+    <button class="btn ghost sm" id="bLang" data-act="lang" data-i18n="langBtn">EN</button>
+  </header>
+  <div id="log" aria-live="polite"></div>
+  <div id="arena">
+    <div id="topSeats"></div>
+    <div id="leftSeat"></div>
+    <div id="center"><div id="table"></div></div>
+    <div id="rightSeat"></div>
+  </div>
+  <div id="mid"><p id="status" aria-live="polite"></p><div id="piles"></div></div>
+  <div id="merow"><div id="me"></div><button class="btn ghost sm" data-act="sortS" data-i18n="b_sortS">По мастям</button><button class="btn ghost sm" data-act="sortR" data-i18n="b_sortR">По рангу</button></div>
+  <div id="hand"></div>
+  <div id="bar">
+    <button class="btn" id="bMeld" data-act="bMeld" data-i18n="b_meld">Выложить</button>
+    <button class="btn" id="bDisc" data-act="bDisc" data-i18n="b_disc">Сбросить</button>
+    <button class="btn ghost" id="bUndo" data-act="bUndo" data-i18n="b_undo">Отменить ход</button>
+    <button class="btn ghost" id="bHint" data-act="bHint" title="Подсказка / Hint" aria-label="Подсказка / Hint">💡<span class="hl"> <span data-i18n="b_hint">Подсказка</span></span></button>
+  </div>
+</div>
+<aside id="score" class="closed"></aside>
+<div id="modal" hidden></div>
+<template id="rules-ru">
+  <h2>Правила</h2>
+  <h3>Колода и ход</h3>
+  <ul>
+    <li>108 карт: две колоды и 4 джокера. Каждому по 14 карт, одна карта открывается в сброс.</li>
+    <li>Ход: взять карту, по желанию выложить, одну карту сбросить. Ходы идут по часовой стрелке.</li>
+    <li>Из сброса можно взять верхнюю карту, только если она в этот же ход ложится на стол.</li>
+    <li>Когда колода кончается, сброс переворачивается без перемешивания.</li>
+    <li>Если у кого-то после раздачи три пары одинаковых карт (та же масть и достоинство, джокеры не считаются) — сразу пересдача, сдаёт следующий. Пересдача не считается раздачей.</li>
+  </ul>
+  <h3>Комбинации</h3>
+  <ul>
+    <li>Группа: 3–4 карты одного достоинства разных мастей.</li>
+    <li>Ряд: от 3 карт подряд одной масти. Туз стоит перед двойкой или после короля, через угол нельзя.</li>
+    <li>Джокер (★) заменяет любую карту, в комбинации не больше одного.</li>
+    <li>Очки: 2–10 по номиналу, валет, дама, король и туз по 10. Джокер на столе стоит как карта, которую заменяет.</li>
+  </ul>
+  <h3>Открытие</h3>
+  <ul>
+    <li>Первая выкладка — не меньше 51 очка за ход. Нужна хотя бы одна своя комбинация, остальное можно доложить к чужим, всё идёт в счёт.</li>
+    <li>После открытия можно докладывать к любым комбинациям. Разбивать комбинации нельзя.</li>
+    <li>Полная комбинация без джокера уходит со стола в сброс, взять из неё карты нельзя, сброс игрока ложится поверх: группа из четырёх мастей, ряд от туза до короля или от двойки до туза.</li>
+  </ul>
+  <h3>Джокер со стола</h3>
+  <ul>
+    <li>В ряду: положите карту, которую он заменяет, и заберите джокер.</li>
+    <li>В группе: джокер забирается, когда доложены все недостающие масти.</li>
+    <li>Забрать джокер может любой игрок в свой ход.</li>
+  </ul>
+  <h3>Подсчёт</h3>
+  <ul>
+    <li>Раздача кончается, когда игрок выложил всё и сбросил последнюю карту.</li>
+    <li>Победителю −20, а за выход в один ход −40.</li>
+    <li>Открывшимся — сумма карт на руке, джокер 15. Не открывшимся — 100.</li>
+    <li>Выход в один ход: штрафы остальных ×2 без джокеров, ×1,5 с одним джокером (округление вниз), с двумя и больше без коэффициента.</li>
+    <li>Партия — 9 раздач, побеждает меньшая сумма.</li>
+  </ul>
+  <p class="credit">Играем по правилам Осамы Шараф, адаптировано Сергеем Завистовским.</p>
+</template>
+<template id="rules-en">
+  <h2>Rules</h2>
+  <h3>Deck and turn</h3>
+  <ul>
+    <li>108 cards: two decks plus 4 jokers. Each player gets 14 cards, and one card is turned up to start the discard pile.</li>
+    <li>A turn: draw a card, lay down cards if you wish, discard one card. Play goes clockwise.</li>
+    <li>You may take the top discard only if you lay it on the table in the same turn.</li>
+    <li>When the deck runs out, the discard pile is turned over without shuffling.</li>
+    <li>If anyone is dealt three pairs of identical cards (same suit and rank; jokers don't count), the cards are redealt at once and the next player deals. A redeal does not count as a deal.</li>
+  </ul>
+  <h3>Combinations</h3>
+  <ul>
+    <li>Set: 3–4 cards of the same rank in different suits.</li>
+    <li>Run: 3 or more consecutive cards of one suit. The ace goes before the two or after the king, never around the corner.</li>
+    <li>A joker (★) stands for any card; at most one per combination.</li>
+    <li>Points: 2–10 at face value; jack, queen, king and ace are 10 each. A joker on the table is worth the card it replaces.</li>
+  </ul>
+  <h3>Opening</h3>
+  <ul>
+    <li>Your first lay-down must total at least 51 points in one turn. You need at least one combination of your own; the rest may be added to other players' combinations, and it all counts.</li>
+    <li>After opening you may add cards to any combination. Combinations cannot be broken up.</li>
+    <li>A complete combination without a joker leaves the table for the discard pile, its cards cannot be taken, and the player's discard goes on top: a set of all four suits, or a run from ace to king or from two to ace.</li>
+  </ul>
+  <h3>Taking a joker from the table</h3>
+  <ul>
+    <li>In a run: lay the card the joker replaces and take the joker.</li>
+    <li>In a set: the joker is taken once all the missing suits have been added.</li>
+    <li>Any player may take a joker on their own turn.</li>
+  </ul>
+  <h3>Scoring</h3>
+  <ul>
+    <li>A deal ends when a player has laid down everything and discarded the last card.</li>
+    <li>The winner scores −20, or −40 for going out in a single turn.</li>
+    <li>Players who opened score the sum of the cards left in hand, a joker counting 15. Players who did not open score 100.</li>
+    <li>Going out in a single turn multiplies the others' penalties: ×2 with no jokers, ×1.5 with one joker (rounded down), no multiplier with two or more.</li>
+    <li>A game is 9 deals; the lowest total wins.</li>
+  </ul>
+  <p class="credit">We play by Osama Sharaf’s rules, adapted by Sergey Zavistovsky.</p>
+</template>
+<script>// Запуск внутри Telegram как мини-приложения. В обычном браузере этот модуль ничего не делает.
+(function () {
+  'use strict';
+  var inTg = /tgWebApp/.test(location.hash) || !!window.TelegramWebviewProxy;
+  var api = window.TG51 = { active: inTg, user: null, ready: false, waiting: [],
+    // вызвать fn(user), когда Telegram сообщит, кто открыл игру (или сразу, если уже сообщил)
+    onUser: function (fn) { if (api.ready) fn(api.user); else api.waiting.push(fn); } };
+  if (!inTg) return;
+  document.documentElement.classList.add('tg');
+  var s = document.createElement('script');
+  s.src = 'https://telegram.org/js/telegram-web-app.js';
+  s.onload = function () {
+    var tg = window.Telegram && window.Telegram.WebApp;
+    if (!tg) return;
+    var safe = function (name) { try { if (typeof tg[name] === 'function') tg[name].apply(tg, [].slice.call(arguments, 1)); } catch (e) { /* старая версия Telegram */ } };
+    safe('ready');
+    safe('expand');                       // на всю высоту окна
+    safe('disableVerticalSwipes');        // жест «потянуть вниз» не закрывает игру и не мешает тянуть карты
+    safe('enableClosingConfirmation');    // спросить перед закрытием, чтобы не потерять ход случайно
+    safe('setHeaderColor', '#0f2a24');
+    safe('setBackgroundColor', '#0f2a24');
+    safe('setBottomBarColor', '#0f2a24');
+    api.user = (tg.initDataUnsafe && tg.initDataUnsafe.user) || null;
+    api.ready = true;
+    api.waiting.splice(0).forEach(function (fn) { try { fn(api.user); } catch (e) { /* не мешаем игре */ } });
+  };
+  document.head.appendChild(s);
+})();
+</script>
+<script>// Строки интерфейса на двух языках.
+(function (root) {
+  'use strict';
+  const S = {
+    ru: {
+      e_nodraw: 'Сейчас нельзя брать карту', e_discEmpty: 'Сброс пуст', e_noundo: 'Нечего отменять', e_drawFirst: 'Сначала возьмите карту',
+      e_noCards: 'Нет таких карт в руке', e_notMeld: 'Это не комбинация: нужна группа (3–4 одного достоинства разных мастей) или ряд от 3 карт одной масти, джокер не больше одного',
+      e_keepOne: 'Одну карту нужно оставить для сброса', e_noSuch: 'Нет такой карты или комбинации', e_noFit: 'Эта карта сюда не подходит',
+      e_mustLay: 'Карту, взятую из сброса, нужно выложить на стол в этот же ход', e_needOwn: 'Для открытия нужна хотя бы одна своя комбинация',
+      e_need51: 'Для открытия нужно выложить не меньше 51, сейчас {0}',
+      l_flip: 'Колода закончилась — сброс перевёрнут', l_redeal: 'три пары одинаковых карт — пересдача, сдаёт следующий', l_sweepSet: 'Полная группа {0} ушла в сброс', l_sweepRun: 'Полный ряд {0} ушёл в сброс',
+      l_stock: 'карта из колоды', l_disc: 'из сброса {0}', l_meld: 'выложено {0}', l_swap: 'джокер заменён на {0}', l_add: 'доложено {0}',
+      l_drop: 'сброс {0}', l_dropEnd: 'сброс {0}, раздача окончена', l_pass: 'карта из колоды и сброс',
+      deal: 'Раздача {0} из {1}', dealer: 'сдаёт', opened: 'открыт', notOpened: 'не открыт', score: 'счёт', cardsInHand: 'карт на руке: {0}',
+      layHere: 'Доложить сюда выбранные карты', emptyTable: 'На столе пока пусто. Первая выкладка — комбинациями на 51 очко и больше.',
+      stock: 'Колода', discardPile: 'Сброс', s_over: 'Раздача окончена', s_turnOf: 'Ходит {0}…',
+      s_draw: 'Ваш ход. Возьмите карту из колоды или из сброса. Из сброса — только если сразу выложите её на стол.',
+      s_play: 'Выберите карты и выложите комбинацию, доложите к комбинации на столе (нажмите на неё) или сбросьте одну карту. Карты в руке можно перетаскивать.',
+      laid: 'выложено {0} из 51', joker: 'джокер', cancel: 'Отмена', close: 'Закрыть',
+      r_noWinner: 'карты закончились, победителя нет', r_won: '{0} заканчивает раздачу', r_title: 'Раздача {0}: {1}',
+      r_oneMove: 'Выход за один ход, джокеров в выкладке: {0}.', r_coef: 'Штрафы остальных ×{0}.', r_nocoef: 'Коэффициента нет.',
+      th_player: 'Игрок', th_left: 'Осталось на руке', th_deal: 'Раздача', th_total: 'Итого', r_out: 'вышел', r_notOpened: 'не открылся',
+      g_over: 'Партия окончена. Победитель: {0} ({1}).', b_table: 'Таблица', b_newGame: 'Новая партия', b_next: 'Следующая раздача',
+      sc_title: 'Счёт по раздачам', sc_none: 'Пока не сыграно ни одной раздачи.',
+      n_name: 'Ваше имя', n_players: 'Игроков за столом', n_opt: '{0} (вы и ботов: {1})', n_reset: 'Текущая партия будет сброшена.', n_dealBtn: 'Раздать',
+      n_level: 'Сила ботов', lv_easy: 'Лёгкие — для новичков, иногда ошибаются', lv_normal: 'Средние — играют ровно', lv_hard: 'Сильные — помнят сброс, не подкармливают, ловят выход за один ход', lv_short_easy: 'боты лёгкие', lv_short_normal: 'боты средние', lv_short_hard: 'боты сильные',
+      c_joker: 'Как поставить джокер?', c_where: 'Куда поставить?', c_swap: 'Заменить джокер', c_lo: 'В начало ряда ({0})', c_hi: 'В конец ряда ({0})',
+      m_pickFirst: 'Сначала выберите в руке карту, которую хотите доложить.', m_gotJoker: 'Джокер у вас в руке.',
+      m_notAll: 'Подошли не все выбранные карты.', m_none: 'Эти карты сюда не подходят.',
+      m_took: 'Взятую карту нужно выложить в этот ход. Передумали — нажмите «Отменить ход».', m_undone: 'Ход отменён.',
+      p_title: 'Счёт', p_hide: 'Скрыть счёт', p_note: 'Меньше — лучше. Золотом отмечен лидер, зелёным — кто закончил раздачу.',
+      h_score: 'Счёт', h_rules: 'Правила', h_new: 'Новая', b_meld: 'Выложить', b_disc: 'Сбросить', b_undo: 'Отменить ход', b_sortS: 'По мастям', b_sortR: 'По рангу',
+      b_hint: 'Подсказка', h_notTurn: 'Подсказка работает в ваш ход.',
+      h_drawDisc: 'Возьмите {0} из сброса — её можно сразу выложить.', h_drawStock: 'Берите из колоды: карта из сброса сейчас не пригодится.',
+      h_open: 'Хватает на открытие — {0} из 51 ({1}). Первая комбинация отмечена — нажмите «Выложить».',
+      h_openMore: 'Выложено {2}, вместе с остальным будет {0} из 51 — хватает. Отмечена следующая комбинация: {1}.',
+      h_short: 'Можно набрать {0} из 51 — не хватает {1} ({3}). Пока копите карты и сбросьте лишнюю.',
+      h_shortLaid: 'Выложено {2}, больше {0} из 51 не набрать — не хватает {1}. Нажмите «Отменить ход» и копите карты.',
+      h_nothing51: 'Комбинаций пока нет. Для открытия нужно набрать {0} за один ход — копите карты и сбросьте лишнюю.',
+      h_meld: 'Можно выложить: {0}. Первая комбинация отмечена — нажмите «Выложить».',
+      h_lay: 'Карту {0} можно доложить — она отмечена, подходящая комбинация подсвечена. Нажмите на комбинацию.',
+      h_none: 'Выкладывать нечего — сбросьте ненужную карту.', h_openDone: 'Набрано {0} из 51 — открытие засчитается, как только сбросите карту.',
+      beta: 'Тестовая версия, возможны ошибки',
+      nm_title: 'Имена игроков', nm_note: 'Имена сохранятся и для следующих партий. Пустое поле — имя по умолчанию.', nm_save: 'Сохранить', nm_you: 'Вы', nm_bot: 'Бот {0}', nm_edit: 'Изменить имена',
+      you: 'Вы', langBtn: 'EN', langTitle: 'Switch to English'
+    },
+    en: {
+      e_nodraw: "You can't draw a card now", e_discEmpty: 'The discard pile is empty', e_noundo: 'Nothing to undo', e_drawFirst: 'Draw a card first',
+      e_noCards: 'Those cards are not in your hand', e_notMeld: 'Not a combination: you need a set (3–4 cards of one rank in different suits) or a run of 3 or more cards in one suit, with at most one joker',
+      e_keepOne: 'You must keep one card to discard', e_noSuch: 'No such card or combination', e_noFit: "This card doesn't fit here",
+      e_mustLay: 'The card taken from the discard pile must be laid on the table in the same turn', e_needOwn: 'To open you need at least one combination of your own',
+      e_need51: 'To open you must lay down at least 51 points; you have {0}',
+      l_flip: 'The deck ran out — the discard pile was turned over', l_redeal: 'three pairs of identical cards — redeal, the next player deals', l_sweepSet: 'Complete set of {0} went to the discard pile', l_sweepRun: 'Complete run {0} went to the discard pile',
+      l_stock: 'drew from the deck', l_disc: 'took {0} from the discard pile', l_meld: 'laid down {0}', l_swap: 'replaced the joker with {0}', l_add: 'added {0}',
+      l_drop: 'discarded {0}', l_dropEnd: 'discarded {0} and went out', l_pass: 'drew and discarded',
+      deal: 'Deal {0} of {1}', dealer: 'dealer', opened: 'opened', notOpened: 'not opened', score: 'score', cardsInHand: 'cards in hand: {0}',
+      layHere: 'Add the selected cards here', emptyTable: 'The table is empty. The first lay-down must total 51 points or more.',
+      stock: 'Deck', discardPile: 'Discard', s_over: 'Deal over', s_turnOf: "{0}'s turn…",
+      s_draw: 'Your turn. Draw from the deck or the discard pile. Take from the discard pile only if you lay that card on the table right away.',
+      s_play: 'Select cards and lay down a combination, add to a combination on the table (click it), or discard one card. You can drag the cards in your hand.',
+      laid: 'laid {0} of 51', joker: 'joker', cancel: 'Cancel', close: 'Close',
+      r_noWinner: 'the cards ran out, no winner', r_won: '{0} went out', r_title: 'Deal {0}: {1}',
+      r_oneMove: 'Went out in a single turn, jokers used: {0}.', r_coef: "Others' penalties ×{0}.", r_nocoef: 'No multiplier.',
+      th_player: 'Player', th_left: 'Left in hand', th_deal: 'Deal', th_total: 'Total', r_out: 'went out', r_notOpened: 'not opened',
+      g_over: 'Game over. Winner: {0} ({1}).', b_table: 'Scores', b_newGame: 'New game', b_next: 'Next deal',
+      sc_title: 'Scores by deal', sc_none: 'No deals played yet.',
+      n_name: 'Your name', n_players: 'Players at the table', n_opt: '{0} (you and {1} bots)', n_reset: 'The current game will be reset.', n_dealBtn: 'Deal',
+      n_level: 'Bot strength', lv_easy: 'Easy — for beginners, make mistakes', lv_normal: 'Medium — steady play', lv_hard: 'Hard — remember the discards, avoid feeding you, go for one-turn finishes', lv_short_easy: 'easy bots', lv_short_normal: 'medium bots', lv_short_hard: 'hard bots',
+      c_joker: 'Where does the joker go?', c_where: 'Where to put it?', c_swap: 'Replace the joker', c_lo: 'At the start of the run ({0})', c_hi: 'At the end of the run ({0})',
+      m_pickFirst: 'First select the card in your hand that you want to add.', m_gotJoker: 'The joker is now in your hand.',
+      m_notAll: 'Not all selected cards fit.', m_none: "These cards don't fit here.",
+      m_took: 'You must lay the taken card this turn. Changed your mind? Press “Undo turn”.', m_undone: 'Turn undone.',
+      p_title: 'Score', p_hide: 'Hide scores', p_note: 'Lower is better. Gold marks the leader, green marks who went out.',
+      h_score: 'Score', h_rules: 'Rules', h_new: 'New', b_meld: 'Lay down', b_disc: 'Discard', b_undo: 'Undo turn', b_sortS: 'By suit', b_sortR: 'By rank',
+      b_hint: 'Hint', h_notTurn: 'Hints work on your turn.',
+      h_drawDisc: 'Take {0} from the discard pile — you can lay it down right away.', h_drawStock: "Draw from the deck: the discard won't help you now.",
+      h_open: 'Enough to open — {0} of 51 ({1}). The first combination is selected — press “Lay down”.',
+      h_openMore: 'Laid {2}; with the rest it will be {0} of 51 — enough. Next combination selected: {1}.',
+      h_short: 'You can make {0} of 51 — {1} short ({3}). Keep collecting and discard a spare card.',
+      h_shortLaid: "Laid {2}; you can't get past {0} of 51 — {1} short. Press “Undo turn” and keep collecting.",
+      h_nothing51: 'No combinations yet. Opening needs {0} points in one turn — keep collecting and discard a spare card.',
+      h_meld: 'You can lay down: {0}. The first combination is selected — press “Lay down”.',
+      h_lay: 'You can add {0} — it is selected and the matching combination is highlighted. Tap the combination.',
+      h_none: 'Nothing to lay down — discard a card you don’t need.', h_openDone: 'You have {0} of 51 — the opening counts as soon as you discard.',
+      beta: 'Test version — bugs are possible',
+      nm_title: 'Player names', nm_note: 'Names are kept for the next games too. Leave a field empty for the default name.', nm_save: 'Save', nm_you: 'You', nm_bot: 'Bot {0}', nm_edit: 'Edit names',
+      you: 'You', langBtn: 'RU', langTitle: 'Переключить на русский'
+    }
+  };
+  let lang = 'ru';
+  const api = {
+    setLang(l) { if (S[l]) lang = l; }, getLang() { return lang; },
+    add(l, d) { Object.assign(S[l], d); }, raw(k) { return S[lang][k] || S.ru[k]; },
+    tr(k) { const a = arguments; return (S[lang][k] || S.ru[k] || k).replace(/\{(\d)\}/g, (_, i) => a[+i + 1]); }
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.I51 = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>// Движок правил «51». Чистая логика без интерфейса: работает и в браузере, и в Node.
+(function (root) {
+  'use strict';
+  const I = (typeof module !== 'undefined' && module.exports) ? require('./i18n.js') : root.I51, tr = I.tr;
+  const SUITS = ['♠', '♥', '♦', '♣'];
+  const RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+  const DEALS = 9, OPEN_MIN = 51, HAND = 14;
+
+  const isJ = c => c.r === 0;
+  const rankVal = r => (r >= 2 && r <= 10) ? r : 10;          // туз (1 или 14) и картинки — 10
+  const clone = o => JSON.parse(JSON.stringify(o));
+  const validRun = (lo, hi) => lo >= 1 && hi <= 14 && !(lo === 1 && hi === 14);
+
+  function mkDeck() {
+    const d = []; let id = 0;
+    for (let k = 0; k < 2; k++) for (let s = 0; s < 4; s++) for (let r = 1; r <= 13; r++) d.push({ id: id++, r, s });
+    for (let j = 0; j < 4; j++) d.push({ id: id++, r: 0, s: -1 });
+    return d;
+  }
+  function shuffle(a, rnd) {
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+
+  // ---------- комбинации ----------
+  // set: {type:'set', rank, cards}   run: {type:'run', suit, lo, cards} — карта i стоит на месте ранга lo+i
+  function meldOptions(cards) {
+    const out = [];
+    const js = cards.filter(isJ), re = cards.filter(c => !isJ(c));
+    if (cards.length < 3 || js.length > 1 || re.length < 2) return out;
+    if (cards.length <= 4 && re.every(c => c.r === re[0].r) && new Set(re.map(c => c.s)).size === re.length)
+      out.push({ type: 'set', rank: re[0].r, cards: [...re, ...js] });
+    if (re.every(c => c.s === re[0].s)) {
+      const suit = re[0].s, hasAce = re.some(c => c.r === 1);
+      for (const high of (hasAce ? [false, true] : [false])) {
+        const rk = re.map(c => ({ c, k: (c.r === 1 && high) ? 14 : c.r })).sort((a, b) => a.k - b.k);
+        let dup = false;
+        for (let i = 1; i < rk.length; i++) if (rk[i].k === rk[i - 1].k) dup = true;
+        if (dup) continue;
+        const mn = rk[0].k, mx = rk[rk.length - 1].k, gaps = mx - mn + 1 - rk.length;
+        const real = rk.map(x => x.c);
+        if (!js.length) {
+          if (gaps === 0 && validRun(mn, mx)) out.push({ type: 'run', suit, lo: mn, cards: real });
+        } else if (gaps === 1) {
+          if (validRun(mn, mx)) {
+            const arr = [];
+            for (let k = mn, i = 0; k <= mx; k++) { if (rk[i].k === k) arr.push(rk[i++].c); else arr.push(js[0]); }
+            out.push({ type: 'run', suit, lo: mn, cards: arr });
+          }
+        } else if (gaps === 0) {
+          if (validRun(mn - 1, mx)) out.push({ type: 'run', suit, lo: mn - 1, cards: [js[0], ...real] });
+          if (validRun(mn, mx + 1)) out.push({ type: 'run', suit, lo: mn, cards: [...real, js[0]] });
+        }
+      }
+    }
+    return out;
+  }
+  function cardValueIn(m, i) { return m.type === 'set' ? rankVal(m.rank) : rankVal(m.lo + i); }
+  function meldValue(m) { let v = 0; for (let i = 0; i < m.cards.length; i++) v += cardValueIn(m, i); return v; }
+  function jokerMeaning(m) {             // что заменяет джокер: {r,s} (s=-1 для группы)
+    const i = m.cards.findIndex(isJ);
+    if (i < 0) return null;
+    return m.type === 'set' ? { r: m.rank, s: -1 } : { r: m.lo + i, s: m.suit };
+  }
+
+  // варианты докладывания карты к комбинации: {k:'add'|'swap', end:'lo'|'hi'|null, pts}
+  function layoffOptions(m, card) {
+    const out = [];
+    const hasJ = m.cards.some(isJ);
+    if (m.type === 'set') {
+      const reals = m.cards.filter(c => !isJ(c));
+      if (isJ(card)) { if (!hasJ && m.cards.length === 3) out.push({ k: 'add', end: null, pts: rankVal(m.rank) }); return out; }
+      if (card.r !== m.rank || reals.some(c => c.s === card.s) || reals.length >= 4) return out;
+      if (hasJ && reals.length === 3) out.push({ k: 'swap', end: null, pts: rankVal(m.rank) });
+      else out.push({ k: 'add', end: null, pts: rankVal(m.rank) });
+      return out;
+    }
+    const lo = m.lo, hi = m.lo + m.cards.length - 1;
+    if (isJ(card)) {
+      if (hasJ) return out;
+      if (validRun(lo - 1, hi)) out.push({ k: 'add', end: 'lo', pts: rankVal(lo - 1) });
+      if (validRun(lo, hi + 1)) out.push({ k: 'add', end: 'hi', pts: rankVal(hi + 1) });
+      return out;
+    }
+    if (card.s !== m.suit) return out;
+    const ks = card.r === 1 ? [1, 14] : [card.r];
+    const ji = m.cards.findIndex(isJ);
+    for (const k of ks) {
+      if (k === lo - 1 && validRun(lo - 1, hi)) out.push({ k: 'add', end: 'lo', pts: rankVal(k) });
+      if (k === hi + 1 && validRun(lo, hi + 1)) out.push({ k: 'add', end: 'hi', pts: rankVal(k) });
+      if (ji >= 0 && lo + ji === k) out.push({ k: 'swap', end: null, pts: rankVal(k) });
+    }
+    return out;
+  }
+
+  // ---------- партия ----------
+  function newGame(players, rnd) {
+    // players: [{name, bot}]
+    const n = players.length;
+    return {
+      players: players.map(p => ({ name: p.name, bot: !!p.bot, hand: [], opened: false, total: 0 })),
+      dealer: Math.floor((rnd || Math.random)() * n),
+      deal: 0, history: [], phase: 'idle', stock: [], discard: [], melds: [], nextMeld: 1, turn: null, log: []
+    };
+  }
+  // сколько пар полностью одинаковых карт (масть и достоинство) на руке; джокеры не считаются
+  function identicalPairs(hand) {
+    const seen = {}; let pairs = 0;
+    for (const c of hand) { if (isJ(c)) continue; const k = c.s * 14 + c.r; if (seen[k]) { pairs++; delete seen[k]; } else seen[k] = 1; }
+    return pairs;
+  }
+  function startDeal(st, rnd) {
+    rnd = rnd || Math.random;
+    const n = st.players.length;
+    if (st.deal > 0) st.dealer = (st.dealer + 1) % n;
+    st.deal++;
+    const notes = [];
+    for (let tries = 0; ; tries++) {
+      const deck = shuffle(mkDeck(), rnd);
+      st.players.forEach(p => { p.hand = []; p.opened = false; });
+      for (let i = 0; i < HAND; i++) for (let k = 1; k <= n; k++) st.players[(st.dealer + k) % n].hand.push(deck.pop());
+      st.discard = [deck.pop()];
+      st.stock = deck;
+      // домашнее правило: три пары одинаковых карт у кого-то на руке — сразу пересдача, сдаёт следующий
+      const who = st.players.findIndex(p => identicalPairs(p.hand) >= 3);
+      if (who < 0 || tries >= 20) break;
+      notes.push({ p: who, k: 'l_redeal' });
+      st.dealer = (st.dealer + 1) % n;
+    }
+    st.melds = []; st.nextMeld = 1; st.result = null; st.phase = 'play';
+    st.log = notes;
+    beginTurn(st, (st.dealer + 1) % n);
+  }
+  function snap(st) {
+    return clone({ hands: st.players.map(p => p.hand), stock: st.stock, discard: st.discard, melds: st.melds, nextMeld: st.nextMeld });
+  }
+  function restore(st, s) {
+    s = clone(s);
+    st.players.forEach((p, i) => { p.hand = s.hands[i]; });
+    st.stock = s.stock; st.discard = s.discard; st.melds = s.melds; st.nextMeld = s.nextMeld;
+  }
+  function freshTurnCounters(t) { t.laidPts = 0; t.jokersLaid = 0; t.ownMelds = 0; t.adds = []; t.swapped = {}; }
+  function beginTurn(st, p) {
+    st.turn = { p, phase: 'draw', took: null, drew: null, wasOpened: st.players[p].opened, pre: null, post: null };
+    freshTurnCounters(st.turn);
+  }
+  const err = msg => ({ ok: false, err: msg });
+  const OK = { ok: true };
+
+  function draw(st, src) {
+    const t = st.turn, pl = st.players[t.p];
+    if (st.phase !== 'play' || t.phase !== 'draw') return err(tr('e_nodraw'));
+    t.pre = snap(st);
+    if (src === 'discard') {
+      if (!st.discard.length) return err(tr('e_discEmpty'));
+      const c = st.discard.pop(); pl.hand.push(c); t.took = c.id; t.drew = c.id;
+    } else {
+      if (!st.stock.length) {
+        if (!st.discard.length) { endDeal(st, -1); return OK; }
+        st.stock = st.discard.reverse(); st.discard = [];           // сброс переворачивается, не мешается
+        st.log.push({ k: 'l_flip' });
+      }
+      const c = st.stock.pop(); pl.hand.push(c); t.took = null; t.drew = c.id;
+    }
+    t.phase = 'play'; t.post = snap(st);
+    return OK;
+  }
+  // отмена хода: взятое из сброса возвращается (снова выбор, откуда брать), взятое из колоды остаётся
+  function resetTurn(st) {
+    const t = st.turn;
+    if (st.phase !== 'play' || t.phase !== 'play') return err(tr('e_noundo'));
+    freshTurnCounters(t);
+    if (t.took != null) { restore(st, t.pre); t.took = null; t.drew = null; t.phase = 'draw'; }
+    else restore(st, t.post);
+    return OK;
+  }
+  function takeCards(pl, ids) {
+    const cards = [];
+    for (const id of ids) { const c = pl.hand.find(x => x.id === id); if (!c || cards.includes(c)) return null; cards.push(c); }
+    return cards;
+  }
+  // полная комбинация (4 масти без джокера или 13 карт ряда без джокера) уходит со стола наверх сброса; сброс игрока в конце хода ложится поверх
+  function sweep(st, m) {
+    if (m.cards.some(isJ)) return false;
+    if (!(m.type === 'set' ? m.cards.length === 4 : m.cards.length === 13)) return false;
+    st.melds = st.melds.filter(x => x !== m);
+    st.discard.push(...m.cards);
+    st.log.push(m.type === 'set' ? { k: 'l_sweepSet', a: RANKS[m.rank] } : { k: 'l_sweepRun', a: RANKS[m.lo] + '–' + RANKS[m.lo + 12] + SUITS[m.suit] });
+    return true;
+  }
+  function playMeld(st, ids, optIndex) {
+    const t = st.turn, pl = st.players[t.p];
+    if (st.phase !== 'play' || t.phase !== 'play') return err(tr('e_drawFirst'));
+    const cards = takeCards(pl, ids);
+    if (!cards) return err(tr('e_noCards'));
+    const opts = meldOptions(cards);
+    if (!opts.length) return err(tr('e_notMeld'));
+    if (pl.hand.length - cards.length < 1) return err(tr('e_keepOne'));
+    const m = opts[optIndex || 0];
+    m.id = st.nextMeld++; m.owner = t.p;
+    pl.hand = pl.hand.filter(c => !ids.includes(c.id));
+    st.melds.push(m);
+    t.laidPts += meldValue(m); t.jokersLaid += m.cards.filter(isJ).length; t.ownMelds++;
+    return { ok: true, meld: m, gone: sweep(st, m) };
+  }
+  function layoff(st, meldId, cardId, optIndex) {
+    const t = st.turn, pl = st.players[t.p];
+    if (st.phase !== 'play' || t.phase !== 'play') return err(tr('e_drawFirst'));
+    const m = st.melds.find(x => x.id === meldId), card = pl.hand.find(c => c.id === cardId);
+    if (!m || !card) return err(tr('e_noSuch'));
+    const opts = layoffOptions(m, card);
+    if (!opts.length) return err(tr('e_noFit'));
+    const o = opts[optIndex || 0];
+    if (o.k === 'add' && pl.hand.length - 1 < 1) return err(tr('e_keepOne'));
+    pl.hand = pl.hand.filter(c => c.id !== cardId);
+    t.laidPts += o.pts; if (isJ(card)) t.jokersLaid++;
+    if (o.k === 'swap') {
+      const ji = m.cards.findIndex(isJ), joker = m.cards[ji];
+      if (m.type === 'set') { m.cards.splice(ji, 1); m.cards.push(card); } else m.cards[ji] = card;
+      pl.hand.push(joker); t.swapped[m.id] = true;
+      return { ok: true, swap: true, joker, gone: sweep(st, m) };
+    }
+    if (m.type === 'set') m.cards.push(card);
+    else if (o.end === 'lo') { m.cards.unshift(card); m.lo--; }
+    else m.cards.push(card);
+    t.adds.push({ meld: m.id, type: m.type });
+    return { ok: true, gone: sweep(st, m) };
+  }
+  // нужно ли игроку «открытие» за этот ход (замена джокера открытия не требует)
+  function needsOpen(t) {
+    return t.ownMelds > 0 || t.adds.some(a => !(a.type === 'set' && t.swapped[a.meld]));
+  }
+  function discard(st, cardId) {
+    const t = st.turn, pl = st.players[t.p];
+    if (st.phase !== 'play' || t.phase !== 'play') return err(tr('e_drawFirst'));
+    const card = pl.hand.find(c => c.id === cardId);
+    if (!card) return err(tr('e_noCards'));
+    if (t.took != null && pl.hand.some(c => c.id === t.took))
+      return err(tr('e_mustLay'));
+    const laying = needsOpen(t);
+    if (!t.wasOpened && laying) {
+      if (t.ownMelds < 1) return err(tr('e_needOwn'));
+      if (t.laidPts < OPEN_MIN) return err(tr('e_need51', t.laidPts));
+    }
+    pl.hand = pl.hand.filter(c => c.id !== cardId);
+    st.discard.push(card);
+    if (laying) pl.opened = true;
+    if (!pl.hand.length) { endDeal(st, t.p); return { ok: true, end: true }; }
+    beginTurn(st, (t.p + 1) % st.players.length);
+    return OK;
+  }
+  function handPenalty(hand) { return hand.reduce((s, c) => s + (isJ(c) ? 15 : rankVal(c.r)), 0); }
+  function endDeal(st, winner) {
+    const t = st.turn;
+    const oneMove = winner >= 0 && !t.wasOpened;
+    const jokers = winner >= 0 ? t.jokersLaid : 0;
+    const coef = oneMove ? (jokers === 0 ? 2 : jokers === 1 ? 1.5 : 1) : 1;
+    const rows = st.players.map((p, i) => {
+      if (i === winner) return { score: oneMove ? -40 : -20, base: 0, opened: true, winner: true };
+      const base = p.opened ? handPenalty(p.hand) : 100;
+      return { score: Math.floor(base * coef), base, opened: p.opened, winner: false };
+    });
+    rows.forEach((r, i) => { st.players[i].total += r.score; });
+    st.result = { winner, oneMove, jokers, coef, rows, deal: st.deal };
+    st.history.push(st.result);
+    st.phase = st.deal >= DEALS ? 'gameEnd' : 'dealEnd';
+  }
+
+  const api = {
+    SUITS, RANKS, DEALS, OPEN_MIN, isJ, rankVal, mkDeck, meldOptions, meldValue, cardValueIn, jokerMeaning,
+    layoffOptions, newGame, startDeal, identicalPairs, draw, resetTurn, playMeld, layoff, discard, needsOpen, handPenalty, clone
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.E51 = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>// Боты для «51». Один вызов step() = одно действие бота (взять, выложить, доложить, сбросить).
+(function (root) {
+  'use strict';
+  const E = (typeof module !== 'undefined' && module.exports) ? require('./engine.js') : root.E51;
+  const isJ = E.isJ, rankVal = E.rankVal;
+  const NODE_CAP = 60000, BONUS = 1000;
+  const label = c => isJ(c) ? '★' : E.RANKS[c.r] + E.SUITS[c.s];
+  const validRun = (lo, hi) => lo >= 1 && hi <= 14 && !(lo === 1 && hi === 14);
+
+  // Лучшее разбиение руки на комбинации (максимум очков). mustId — карта, которую обязательно хочется пристроить.
+  function bestMelds(hand, mustId) {
+    const cnt = new Array(56).fill(0), pools = {}, jok = [];
+    let mustKey = -9;
+    for (const c of hand) {
+      if (isJ(c)) { if (c.id === mustId) { jok.unshift(c); mustKey = -1; } else jok.push(c); continue; }
+      const k = c.s * 14 + c.r; cnt[k]++;
+      if (!pools[k]) pools[k] = [];
+      if (c.id === mustId) { pools[k].unshift(c); mustKey = k; } else pools[k].push(c);
+    }
+    let J = jok.length, best = { v: -1, n: 0, melds: [] }, cur = [], curV = 0, curN = 0, nodes = 0;
+    const kval = k => rankVal(k % 14);
+    function apply(d, sign) {
+      for (const k of d.keys) { if (k < 0) J -= sign; else cnt[k] -= sign; }
+      curV += sign * d.v; curN += sign * d.keys.length;
+      if (sign > 0) cur.push(d); else cur.pop();
+    }
+    function dfs(start) {
+      if (++nodes > NODE_CAP) return;
+      let k = start; while (k < 56 && !cnt[k]) k++;
+      if (k >= 56) {
+        if (curV > best.v || (curV === best.v && curN > best.n)) best = { v: curV, n: curN, melds: cur.slice() };
+        return;
+      }
+      let rem = J * 10 + BONUS; for (let i = k; i < 56; i++) rem += cnt[i] * kval(i);
+      if (curV + rem < best.v) return;
+      const s = Math.floor(k / 14), r = k % 14, cands = [];
+      // группы
+      const others = []; for (let s2 = s + 1; s2 < 4; s2++) if (cnt[s2 * 14 + r]) others.push(s2 * 14 + r);
+      const v = rankVal(r);
+      for (let mask = 1; mask < (1 << others.length); mask++) {
+        const sub = others.filter((_, i) => mask & (1 << i));
+        if (sub.length >= 2) cands.push({ type: 'set', rank: r, keys: [k, ...sub], v: v * (sub.length + 1) });
+        if (J > 0 && sub.length <= 2) cands.push({ type: 'set', rank: r, keys: [k, ...sub, -1], v: v * (sub.length + 2) });
+      }
+      // ряды
+      for (const p of (r === 1 ? [1, 14] : [r])) {
+        for (let a = Math.max(1, p - 12); a <= p; a++) for (let b = Math.max(p, a + 2); b <= Math.min(14, a + 12); b++) {
+          if (!validRun(a, b)) continue;
+          let miss = 0, missAt = -1, sum = 0;
+          for (let x = a; x <= b && miss < 2; x++) {
+            sum += rankVal(x);
+            if (x === p) continue;
+            if (!cnt[s * 14 + (x === 14 ? 1 : x)]) { miss++; missAt = x; }
+          }
+          if (miss > 1 || (miss === 1 && J < 1)) { if (miss > 1 && missAt > p) break; continue; }
+          const mk = q => { const keys = []; for (let x = a; x <= b; x++) keys.push(x === q ? -1 : s * 14 + (x === 14 ? 1 : x)); return keys; };
+          if (miss === 0) {
+            cands.push({ type: 'run', suit: s, lo: a, keys: mk(-99), v: sum });
+            if (J > 0 && b - a + 1 >= 3) {             // джокер с краю вместо настоящей карты (не вместо p)
+              if (a !== p && b - a >= 2) cands.push({ type: 'run', suit: s, lo: a, keys: mk(a), v: sum });
+              if (b !== p && b - a >= 2) cands.push({ type: 'run', suit: s, lo: a, keys: mk(b), v: sum });
+            }
+          } else cands.push({ type: 'run', suit: s, lo: a, keys: mk(missAt), v: sum });
+        }
+      }
+      for (const d of cands) {
+        if (d.keys.filter(x => x >= 0).length < 2) continue;
+        // в ряду один и тот же ключ не может встречаться дважды (гарантирует validRun), проверим наличие
+        let ok = true; for (const x of d.keys) if (x >= 0 && cnt[x] < 1) ok = false;
+        if (!ok) continue;
+        const bonus = d.keys.includes(mustKey) ? BONUS : 0;
+        d.v += bonus; apply(d, 1); dfs(k); apply(d, -1); d.v -= bonus;
+      }
+      cnt[k]--; dfs(k); cnt[k]++;      // оставить карту в руке
+    }
+    dfs(0);
+    // материализация: ключи -> конкретные карты
+    const melds = best.melds.map(d => {
+      const cards = d.keys.map(k => k < 0 ? jok.shift() : pools[k].shift());
+      const m = { type: d.type, cards };
+      if (d.type === 'set') m.rank = d.rank; else { m.suit = d.suit; m.lo = d.lo; }
+      return m;
+    });
+    return melds;
+  }
+  function optIndexFor(m) {
+    const opts = E.meldOptions(m.cards);
+    const ji = m.cards.findIndex(isJ);
+    for (let i = 0; i < opts.length; i++) {
+      const o = opts[i];
+      if (o.type !== m.type) continue;
+      if (o.type === 'set') return i;
+      if (o.lo === m.lo && o.cards.findIndex(isJ) === (ji < 0 ? -1 : o.cards.findIndex(c => c.id === m.cards[ji].id))) return i;
+    }
+    return -1;
+  }
+  const lvl = st => st.level || 'normal';
+  // Что игрок брал из сброса в этой раздаче (это видят все за столом).
+  function noteTake(st, p, card) {
+    if (!card || isJ(card)) return;
+    if (!st.takes || st.takes.deal !== st.deal) st.takes = { deal: st.deal, by: {} };
+    (st.takes.by[p] = st.takes.by[p] || []).push({ r: card.r, s: card.s });
+  }
+  const takesOf = (st, p) => (st.takes && st.takes.deal === st.deal && st.takes.by[p]) || [];
+  function canLayoff(st, card, kinds) {
+    for (const m of st.melds) { const o = E.layoffOptions(m, card); if (o.some(x => !kinds || kinds.includes(x.k))) return true; }
+    return false;
+  }
+  // План хода: какие комбинации выкладывать. passive = в этот ход на стол ничего не кладём.
+  function evalPlan(st, hand, opened, mustId) {
+    let melds = bestMelds(hand, mustId);
+    let used = melds.reduce((s, m) => s + m.cards.length, 0);
+    if (used >= hand.length && melds.length) {            // одну карту надо оставить на сброс
+      let done = false;
+      for (const m of melds) {
+        if (m.cards.length < 4) continue;
+        if (m.type === 'run') {
+          const last = m.cards[m.cards.length - 1], first = m.cards[0];
+          if (last.id !== mustId) { m.cards.pop(); done = true; }
+          else if (first.id !== mustId) { m.cards.shift(); m.lo++; done = true; }
+        } else {
+          const i = m.cards.findIndex(c => c.id !== mustId && !isJ(c));
+          if (i >= 0) { m.cards.splice(i, 1); done = true; }
+        }
+        if (done) break;
+      }
+      if (!done) {
+        let wi = -1, wv = 1e9;
+        melds.forEach((m, i) => { const v = E.meldValue(m); if (!m.cards.some(c => c.id === mustId) && v < wv) { wv = v; wi = i; } });
+        if (wi >= 0) melds.splice(wi, 1); else melds = [];
+      }
+    }
+    const usedIds = new Set(); melds.forEach(m => m.cards.forEach(c => usedIds.add(c.id)));
+    const left = hand.filter(c => !usedIds.has(c.id));
+    let total = melds.reduce((s, m) => s + E.meldValue(m), 0);
+    const lay = [];
+    for (const c of left) {
+      let bestPts = 0;
+      for (const m of st.melds) for (const o of E.layoffOptions(m, c)) if (o.k === 'add') bestPts = Math.max(bestPts, o.pts);
+      if (bestPts) lay.push(bestPts);
+    }
+    lay.sort((a, b) => b - a);
+    const maxLay = Math.max(0, left.length - 1);
+    const layPts = lay.slice(0, maxLay).reduce((s, x) => s + x, 0);
+    const must = mustId == null ? null : hand.find(c => c.id === mustId);
+    const mustInMeld = must && usedIds.has(must.id);
+    let passive = false;
+    if (!opened && (melds.length < 1 || total + layPts < E.OPEN_MIN)) passive = true;
+    const usesMust = !must || (!passive && (mustInMeld || (canLayoff(st, must) && left.length > 1)));
+    const leftAfter = left.length - Math.min(lay.length, maxLay);
+    return { melds, passive, usesMust, total: total + layPts, leftAfter };
+  }
+  function wantDiscard(st, p) {
+    const pl = st.players[p], top = st.discard[st.discard.length - 1];
+    if (!top) return false;
+    const plan = evalPlan(st, pl.hand.concat([top]), pl.opened, top.id);
+    return !plan.passive && plan.usesMust;
+  }
+  function chooseDiscard(st, p) {
+    const pl = st.players[p], lv = lvl(st), n = st.players.length;
+    let cands = pl.hand.filter(c => !isJ(c));
+    if (!cands.length) cands = pl.hand;
+    if (lv === 'easy' && Math.random() < 0.25) return cands[Math.floor(Math.random() * cands.length)];
+    const nx = (p + 1) % n, next = st.players[nx], nextTakes = takesOf(st, nx);
+    const danger = st.players.some((q, i) => i !== p && q.opened && q.hand.length <= 5);
+    let best = null, bs = 1e9;
+    for (const c of cands) {
+      let s = 0;
+      if (!isJ(c)) {
+        for (const d of pl.hand) {
+          if (d === c || isJ(d)) continue;
+          if (d.r === c.r && d.s !== c.s) s += 2;
+          else if (d.s === c.s) {
+            const dist = Math.min(Math.abs(d.r - c.r), c.r === 1 ? Math.abs(d.r - 14) : 99, d.r === 1 ? Math.abs(14 - c.r) : 99);
+            if (dist === 1) s += 2; else if (dist === 2) s += 1;
+          }
+        }
+        if (canLayoff(st, c, ['add'])) s += 2;
+      }
+      s = s * 100 - rankVal(c.r) + Math.random() * (lv === 'easy' ? 150 : 3);     // при равной пользе сбрасываем подороже
+      if (lv === 'hard' && !isJ(c)) {
+        // не подкармливать следующего игрока
+        if (next.opened && canLayoff(st, c, ['add', 'swap'])) s += 400;
+        for (const x of nextTakes) { if (x.r === c.r && x.s !== c.s) s += 120; else if (x.s === c.s && Math.abs(x.r - c.r) <= 2) s += 90; }
+        // кто-то вот-вот закончит — сбрасываем дорогие карты
+        if (danger) s -= rankVal(c.r) * 30;
+      }
+      if (s < bs) { bs = s; best = c; }
+    }
+    return best;
+  }
+
+  function step(st) {
+    const t = st.turn, p = t.p, pl = st.players[p];
+    if (t.phase === 'draw') {
+      if (!t.giveUp && !(lvl(st) === 'easy' && Math.random() < 0.5) && wantDiscard(st, p)) {
+        const top = st.discard[st.discard.length - 1];
+        E.draw(st, 'discard'); noteTake(st, p, top); return { k: 'l_disc', a: label(top) };
+      }
+      E.draw(st, 'stock'); return { k: 'l_stock' };
+    }
+    const fail = () => { E.resetTurn(st); st.turn.giveUp = true; st.turn.plan = null; return step(st); };
+    if (!t.giveUp) {
+      if (!t.plan) {
+        const pre = evalPlan(st, pl.hand, pl.opened || t.ownMelds > 0, t.took);
+        const lv = lvl(st), fresh = !pl.opened && !t.ownMelds && t.took == null;
+        if (!t.replans) t.lazy = lv === 'easy' && Math.random() < 0.3;      // лёгкий бот иногда «не замечает» докладку
+        if (fresh && !pre.passive) {
+          if (lv === 'easy' && Math.random() < 0.2) pre.passive = true;    // прозевал открытие
+          if (lv === 'hard' && pre.leftAfter === 2) {
+            // придержать карты, чтобы выйти за один ход: только пока это безопасно
+            const safe = st.players.every((q, i) => i === p || q.hand.length >= 11) && st.stock.length >= 15;
+            st.holds = st.holds && st.holds.deal === st.deal ? st.holds : { deal: st.deal, by: {} };
+            if (safe && (st.holds.by[p] || 0) < 2) { st.holds.by[p] = (st.holds.by[p] || 0) + 1; pre.passive = true; }
+          }
+        }
+        t.plan = { melds: pre.melds.map(m => ({ ids: m.cards.map(c => c.id), opt: optIndexFor(m) })), passive: pre.passive };
+        if (pre.passive) t.plan.melds = [];
+        t.replans = (t.replans || 0) + 1;
+      }
+      if (t.plan.melds.length) {
+        const m = t.plan.melds.shift();
+        const r = m.opt < 0 ? { ok: false } : E.playMeld(st, m.ids, m.opt);
+        if (!r.ok) return fail();
+        return { k: 'l_meld', a: r.meld.cards.map(label).join(' ') };
+      }
+      if (!t.plan.passive && !t.lazy) {
+        // забрать джокер со стола
+        for (const m of st.melds) for (const c of pl.hand) {
+          const opts = E.layoffOptions(m, c), i = opts.findIndex(o => o.k === 'swap');
+          if (i >= 0) {
+            E.layoff(st, m.id, c.id, i);
+            if (t.replans < 4) t.plan = null;
+            return { k: 'l_swap', a: label(c) };
+          }
+        }
+        // доложить (взятую из сброса — первой)
+        const order = pl.hand.slice().sort((a, b) => (b.id === t.took) - (a.id === t.took) || rankVal(b.r) - rankVal(a.r));
+        if (pl.hand.length > 1) for (const c of order) for (const m of st.melds) {
+          const opts = E.layoffOptions(m, c);
+          let bi = -1; opts.forEach((o, i) => { if (o.k === 'add' && (bi < 0 || o.pts > opts[bi].pts)) bi = i; });
+          if (bi >= 0) { const r = E.layoff(st, m.id, c.id, bi); if (r.ok) return { k: 'l_add', a: label(c) }; }
+        }
+      }
+    }
+    const d = chooseDiscard(st, p);
+    const r = E.discard(st, d.id);
+    if (!r.ok) { if (t.giveUp) throw new Error('bot stuck: ' + r.err); return fail(); }
+    return { k: r.end ? 'l_dropEnd' : 'l_drop', a: label(d) };
+  }
+
+  const api = { step, bestMelds, evalPlan, label, noteTake };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.B51 = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>// Подсказка игроку в его ход: что взять, что выложить, сколько не хватает до 51.
+// Смотрит только то, что видит сам игрок: свою руку, стол и верх сброса.
+(function (root) {
+  'use strict';
+  const node = typeof module !== 'undefined' && module.exports;
+  const E = node ? require('./engine.js') : root.E51;
+  const B = node ? require('./bots.js') : root.B51;
+
+  // результат: { k: ключ строки, a: [аргументы], select: [id карт], meld: id комбинации на столе или null }
+  function hint(st, me) {
+    const t = st.turn, pl = st.players[me];
+    if (st.phase !== 'play' || t.p !== me) return { k: 'h_notTurn', a: [], select: [], meld: null };
+    const hand = pl.hand;
+    if (t.phase === 'draw') {
+      const top = st.discard[st.discard.length - 1];
+      if (top) {
+        const p = B.evalPlan(st, hand.concat([top]), pl.opened, top.id);
+        if (!p.passive && p.usesMust) return { k: 'h_drawDisc', a: [B.label(top)], select: [], meld: null };
+      }
+      return { k: 'h_drawStock', a: [], select: [], meld: null };
+    }
+    // что можно положить из руки (как будто уже открыт — чтобы посчитать весь потенциал)
+    const plan = B.evalPlan(st, hand, true, t.took);
+    const meldsText = plan.melds.map(m => m.cards.map(B.label).join(' ')).join(' · ');
+    const layCard = () => {
+      for (const c of hand) for (const m of st.melds) {
+        const o = E.layoffOptions(m, c);
+        if (o.some(x => x.k === 'swap') || (o.some(x => x.k === 'add') && hand.length > 1)) return { c, m };
+      }
+      return null;
+    };
+    if (!t.wasOpened && t.laidPts >= E.OPEN_MIN && t.ownMelds > 0) {
+      // открытие уже набрано в этот ход: можно добавить ещё или сбросить
+      if (plan.melds.length) return { k: 'h_meld', a: [meldsText], select: plan.melds[0].cards.map(c => c.id), meld: null };
+      const lc0 = layCard();
+      if (lc0) return { k: 'h_lay', a: [B.label(lc0.c)], select: [lc0.c.id], meld: lc0.m.id };
+      return { k: 'h_openDone', a: [t.laidPts], select: [], meld: null };
+    }
+    if (!t.wasOpened) {
+      const laid = t.laidPts, sum = laid + plan.total;
+      const canOwn = t.ownMelds > 0 || plan.melds.length > 0;
+      if (sum >= E.OPEN_MIN && canOwn) {
+        if (plan.melds.length) return { k: laid ? 'h_openMore' : 'h_open', a: [sum, meldsText, laid], select: plan.melds[0].cards.map(c => c.id), meld: null };
+        const lc = layCard();
+        if (lc) return { k: 'h_lay', a: [B.label(lc.c)], select: [lc.c.id], meld: lc.m.id };
+      }
+      if (!laid && !plan.melds.length) return { k: 'h_nothing51', a: [E.OPEN_MIN], select: [], meld: null };
+      return { k: laid ? 'h_shortLaid' : 'h_short', a: [sum, E.OPEN_MIN - sum, laid, meldsText], select: [], meld: null };
+    }
+    if (plan.melds.length) return { k: 'h_meld', a: [meldsText], select: plan.melds[0].cards.map(c => c.id), meld: null };
+    const lc = layCard();
+    if (lc) return { k: 'h_lay', a: [B.label(lc.c)], select: [lc.c.id], meld: lc.m.id };
+    return { k: 'h_none', a: [], select: [], meld: null };
+  }
+  // комбинации на столе, к которым подходит хоть одна из выбранных карт
+  function fitting(st, me, selIds) {
+    const hand = st.players[me].hand, out = new Set();
+    for (const id of selIds) {
+      const c = hand.find(x => x.id === id); if (!c) continue;
+      for (const m of st.melds) if (E.layoffOptions(m, c).length) out.add(m.id);
+    }
+    return out;
+  }
+  const api = { hint, fitting };
+  if (node) module.exports = api; else root.H51 = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>(function () {
+  'use strict';
+  const E = window.E51, B = window.B51, I = window.I51, tr = I.tr, ME = 0, KEY = 'game51-v1';
+  const BOTS = { ru: ['Айна', 'Батыр', 'Вера', 'Гена', 'Дарья'], en: ['Aina', 'Batyr', 'Vera', 'Gena', 'Darya'] };
+  let st = null, sel = new Set(), order = [], msg = '', msgErr = false, timer = null, modal = null;
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const lbl = B.label;
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* не запомнится */ } } };
+
+  I.setLang(store.get(KEY + '-lang') || ((navigator.language || 'ru').toLowerCase().startsWith('ru') ? 'ru' : 'en'));
+
+  function save() { store.set(KEY, JSON.stringify({ st, order })); }
+  function load() {
+    try { const d = JSON.parse(store.get(KEY)); if (d && d.st && d.st.players && d.st.turn) { st = d.st; order = d.order || []; return true; } } catch (e) { /* нет сохранения */ }
+    return false;
+  }
+  function say(t, isErr) { msg = t || ''; msgErr = !!isErr; }
+  function log(p, k, a) { st.log.push({ p, k, a }); if (st.log.length > 40) st.log.splice(0, st.log.length - 40); }
+  // имя игрока на текущем языке (боты и имя по умолчанию переводятся)
+  function pname(p) {
+    if (!p.bot) return (p.name === 'Вы' || p.name === 'You') ? tr('you') : p.name;
+    let i = BOTS.ru.indexOf(p.name); if (i < 0) i = BOTS.en.indexOf(p.name);
+    return i < 0 ? p.name : BOTS[I.getLang()][i];
+  }
+  function logText(x) {
+    if (typeof x === 'string') return x;
+    const body = tr(x.k, x.a);
+    return x.p == null ? body : pname(st.players[x.p]) + ': ' + body;
+  }
+
+  const LEVELS = ['easy', 'normal', 'hard'];
+  function savedLevel() { const l = store.get(KEY + '-level'); return LEVELS.includes(l) ? l : 'normal'; }
+  // свои имена ботов (пустая строка — имя по умолчанию, переводится)
+  function botNames() { try { const a = JSON.parse(store.get(KEY + '-bots') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function newGame(name, n, level) {
+    const ps = [{ name: name || tr('you'), bot: false }], custom = botNames();
+    for (let i = 0; i < n - 1; i++) ps.push({ name: custom[i] || BOTS.ru[i], bot: true });
+    st = E.newGame(ps); st.level = LEVELS.includes(level) ? level : 'normal'; store.set(KEY + '-level', st.level); E.startDeal(st);
+    afterDeal();
+  }
+  function afterDeal() { sel.clear(); modal = null; say(''); sortHand('suit'); save(); render(); tick(); }
+  function sortHand(mode) {
+    const h = st.players[ME].hand.slice();
+    const key = c => E.isJ(c) ? 9999 : (mode === 'suit' ? c.s * 20 + c.r : c.r * 10 + c.s);
+    h.sort((a, b) => key(a) - key(b));
+    order = h.map(c => c.id);
+  }
+  function myHand() {
+    const h = st.players[ME].hand.slice();
+    const pos = id => { const i = order.indexOf(id); return i < 0 ? 1e6 + id : i; };
+    h.sort((a, b) => pos(a.id) - pos(b.id));
+    order = h.map(c => c.id);
+    return h;
+  }
+
+  // ---------- отрисовка ----------
+  function cardHTML(c, tag, cls, sub) {
+    const a = tag === 'button' ? ` data-act="card" data-id="${c.id}"` : '';
+    if (E.isJ(c)) return `<${tag} class="card joker ${cls || ''}"${a} aria-label="${tr('joker')}"><span class="rk">★</span><span class="jk">${sub || tr('joker')}</span></${tag}>`;
+    const red = c.s === 1 || c.s === 2;
+    return `<${tag} class="card ${red ? 'red' : ''} ${cls || ''}"${a} aria-label="${lbl(c)}"><span class="rk">${E.RANKS[c.r]}</span><span class="su">${E.SUITS[c.s]}</span></${tag}>`;
+  }
+  function jokerSub(m) {
+    const j = E.jokerMeaning(m); if (!j) return '';
+    return '=' + E.RANKS[j.r] + (j.s >= 0 ? E.SUITS[j.s] : '');
+  }
+  function meldText(m) { return m.cards.map(c => E.isJ(c) ? '★(' + jokerSub(m) + ')' : lbl(c)).join(' '); }
+  function pills(p) { return `<span class="pill ${p.opened ? 'open' : ''}">${p.opened ? tr('opened') : tr('notOpened')}</span>`; }
+  function dealerTag(i) { return st.dealer === i ? ` <span class="dl">${tr('dealer')}</span>` : ''; }
+
+  const narrow = window.matchMedia('(max-width:600px)');
+  narrow.addEventListener('change', () => render());
+  function renderStatic() {
+    document.documentElement.lang = I.getLang();
+    document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = tr(el.dataset.i18n); });
+    $('bLang').title = tr('langTitle');
+  }
+  function render() {
+    if (!st) return;
+    renderStatic();
+    const t = st.turn, n = st.players.length, playing = st.phase === 'play';
+    const myTurn = playing && t.p === ME, me = st.players[ME];
+    if (!playing && !modal) modal = { type: 'result' };
+    $('deal').textContent = tr('deal', st.deal, E.DEALS) + ' · ' + tr('lv_short_' + (st.level || 'normal'));
+
+    let h = '';
+    const m = n - 1, slots = { top: '', left: '', right: '' };
+    for (let k = 1; k < n; k++) {             // по часовой стрелке от вас: слева, напротив, справа
+      const i = (ME + k) % n, p = st.players[i];
+      const slot = (m === 1 || narrow.matches) ? 'top' : k === 1 ? 'left' : k === m ? 'right' : 'top';
+      slots[slot] += `<div class="seat ${playing && t.p === i ? 'active' : ''}"><div class="nm"><button class="nmb" data-act="names" title="${tr('nm_edit')}">${esc(pname(p))}</button>${dealerTag(i)}<b class="tot">${p.total}</b></div>
+        <div class="backs" aria-label="${tr('cardsInHand', p.hand.length)}">${'<i></i>'.repeat(p.hand.length)}<b>${p.hand.length}</b></div>
+        <div class="meta">${pills(p)}<span>${tr('score')}: <b>${p.total}</b></span></div></div>`;
+    }
+    $('topSeats').innerHTML = slots.top; $('leftSeat').innerHTML = slots.left; $('rightSeat').innerHTML = slots.right;
+    $('log').innerHTML = st.log.slice(-2).map(x => `<div>${esc(logText(x))}</div>`).join('');
+
+    h = '';
+    // подсветка: куда подходят выбранные карты (или что предложила подсказка)
+    const fit = myTurn && t.phase === 'play' ? H51.fitting(st, ME, [...sel]) : new Set();
+    if (hintMeld != null && myTurn) fit.add(hintMeld);
+    for (const md of st.melds) {
+      const js = jokerSub(md);
+      h += `<button class="meld ${fit.has(md.id) ? 'fit' : ''}" data-act="meld" data-mid="${md.id}" title="${tr('layHere')}">${md.cards.map(c => cardHTML(c, 'span', 'sm', js)).join('')}</button>`;
+    }
+    $('table').innerHTML = h || `<p class="empty">${tr('emptyTable')}</p>`;
+
+    const top = st.discard[st.discard.length - 1];
+    const canDraw = myTurn && t.phase === 'draw';
+    $('piles').innerHTML =
+      `<button class="pile ${canDraw ? 'hot' : ''}" data-act="stock" ${canDraw ? '' : 'disabled'}><span class="card back"><span class="cntb">${st.stock.length}</span></span><span class="cap">${tr('stock')}</span></button>
+       <button class="pile ${canDraw && top ? 'hot' : ''}" data-act="disc" ${canDraw && top ? '' : 'disabled'}>${top ? cardHTML(top, 'span') : '<span class="card none"></span>'}<span class="cap">${tr('discardPile')}</span></button>`;
+
+    let status = msg;
+    if (!status) {
+      if (!playing) status = tr('s_over');
+      else if (!myTurn) status = tr('s_turnOf', pname(st.players[t.p]));
+      else status = tr(t.phase === 'draw' ? 's_draw' : 's_play');
+    }
+    $('status').textContent = status; $('status').className = msgErr ? 'err' : '';
+
+    const laying = myTurn && t.phase === 'play' && !t.wasOpened && E.needsOpen(t);
+    $('me').innerHTML = `<span class="nm"><button class="nmb" data-act="names" title="${tr('nm_edit')}">${esc(pname(me))}</button>${dealerTag(ME)}</span>${pills(me)}
+      ${laying ? `<span class="pill ${t.laidPts >= E.OPEN_MIN ? 'open' : 'warn'}">${tr('laid', t.laidPts)}</span>` : ''}
+      <span>${tr('score')}: <b>${me.total}</b></span>`;
+    $('me').className = myTurn ? 'active' : '';
+
+    renderHand();
+    const play = myTurn && t.phase === 'play';
+    $('bMeld').disabled = !(play && sel.size >= 3);
+    $('bDisc').disabled = !(play && sel.size === 1);
+    $('bUndo').disabled = !play;
+    $('bHint').disabled = !myTurn;
+    renderScore();
+    renderModal();
+  }
+  // панель счёта: на широком экране стоит рядом со столом, на узком выезжает справа
+  let scoreOpen = (() => { const v = store.get(KEY + '-score'); return v != null ? v === '1' : window.innerWidth >= 1280; })();
+  function renderScore() {
+    const el = $('score'), ps = st.players, min = Math.min(...ps.map(p => p.total));
+    el.classList.toggle('closed', !scoreOpen);
+    $('bScore').setAttribute('aria-expanded', scoreOpen);
+    let h = `<div class="sh"><h2>${tr('p_title')}</h2><button class="btn ghost sm" data-act="toggleScore" aria-label="${tr('p_hide')}">✕</button></div><table><thead><tr><th class="dn">№</th>` +
+      ps.map(p => `<th class="num" title="${esc(pname(p))}">${esc(pname(p))}</th>`).join('') + '</tr></thead><tbody>';
+    for (let d = 1; d <= E.DEALS; d++) {
+      const r = st.history[d - 1];
+      h += `<tr class="${!r && d === st.deal ? 'cur' : ''}"><td class="dn">${d}</td>` + ps.map((p, i) => `<td class="num ${r && r.rows[i].winner ? 'winc' : ''}">${r ? fmt(r.rows[i].score) : (d === st.deal ? '…' : '')}</td>`).join('') + '</tr>';
+    }
+    h += '<tr class="sum"><td class="dn">Σ</td>' + ps.map(p => `<td class="num ${st.history.length && p.total === min ? 'lead' : ''}"><b>${p.total}</b></td>`).join('') + '</tr></tbody></table>' +
+      `<p class="note">${tr('p_note')}</p>`;
+    el.innerHTML = h;
+  }
+  function renderHand() {
+    const t = st.turn, myTurn = st.phase === 'play' && t.p === ME;
+    $('hand').innerHTML = myHand().map(c => cardHTML(c, 'button', (sel.has(c.id) ? 'sel ' : '') + (myTurn && t.drew === c.id ? 'new ' : '') + (drag && drag.on && drag.id === c.id ? 'drag' : ''))).join('');
+  }
+  // перетаскивание карт в руке: порядок меняется сразу, пока тянете
+  let drag = null, dragEnd = 0;
+  $('hand').addEventListener('pointerdown', ev => {
+    const el = ev.target.closest('.card'); if (!el || ev.button > 0) return;
+    drag = { id: +el.dataset.id, x: ev.clientX, y: ev.clientY, on: false };
+  });
+  document.addEventListener('pointermove', ev => {
+    if (!drag) return;
+    if (!drag.on) { if (Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) < 10) return; drag.on = true; renderHand(); }
+    const el = document.elementFromPoint(ev.clientX, ev.clientY), tgt = el && el.closest('#hand .card');
+    if (!tgt) return;
+    const tid = +tgt.dataset.id; if (tid === drag.id) return;
+    const r = tgt.getBoundingClientRect(), after = ev.clientX > r.left + r.width * 0.35;
+    order = order.filter(x => x !== drag.id);
+    order.splice(order.indexOf(tid) + (after ? 1 : 0), 0, drag.id);
+    renderHand();
+  });
+  const dragStop = () => { if (!drag) return; const was = drag.on; drag = null; if (was) { dragEnd = Date.now(); save(); renderHand(); } };
+  document.addEventListener('pointerup', dragStop);
+  document.addEventListener('pointercancel', dragStop);
+
+  function renderModal() {
+    const box = $('modal');
+    if (!modal) { box.hidden = true; box.innerHTML = ''; return; }
+    let h = '';
+    if (modal.type === 'choose') {
+      h = `<h2>${esc(modal.title)}</h2><div class="opts">` + modal.options.map((o, i) => `<button class="btn" data-act="opt" data-i="${i}">${esc(o.label)}</button>`).join('') +
+        `</div><div class="row"><button class="btn ghost" data-act="close">${tr('cancel')}</button></div>`;
+    } else if (modal.type === 'result') {
+      const r = st.result, end = st.phase === 'gameEnd';
+      const head = r.winner < 0 ? tr('r_noWinner') : tr('r_won', esc(pname(st.players[r.winner])));
+      let note = '';
+      if (r.oneMove) note = tr('r_oneMove', r.jokers) + ' ' + (r.coef > 1 ? tr('r_coef', I.getLang() === 'ru' ? String(r.coef).replace('.', ',') : r.coef) : tr('r_nocoef'));
+      h = `<h2>${tr('r_title', r.deal, head)}</h2>${note ? `<p class="note">${note}</p>` : ''}<div class="tw"><table><thead><tr><th>${tr('th_player')}</th><th>${tr('th_left')}</th><th class="num">${tr('th_deal')}</th><th class="num">${tr('th_total')}</th></tr></thead><tbody>` +
+        st.players.map((p, i) => `<tr class="${r.rows[i].winner ? 'win' : ''}"><td>${esc(pname(p))}</td><td class="rest">${r.rows[i].winner ? tr('r_out') : (r.rows[i].opened ? '' : tr('r_notOpened') + ' · ') + p.hand.map(lbl).join(' ')}</td><td class="num">${fmt(r.rows[i].score)}</td><td class="num"><b>${p.total}</b></td></tr>`).join('') + '</tbody></table></div>';
+      if (end) {
+        const min = Math.min(...st.players.map(p => p.total));
+        const w = st.players.filter(p => p.total === min).map(pname).join(', ');
+        h += `<p class="final">${tr('g_over', '<b>' + esc(w) + '</b>', min)}</p><div class="row"><button class="btn ghost" data-act="scores">${tr('b_table')}</button><button class="btn" data-act="new">${tr('b_newGame')}</button></div>`;
+      } else h += `<div class="row"><button class="btn ghost" data-act="scores">${tr('b_table')}</button><button class="btn" data-act="next">${tr('b_next')}</button></div>`;
+    } else if (modal.type === 'scores') {
+      h = `<h2>${tr('sc_title')}</h2><div class="tw"><table><thead><tr><th>№</th>` + st.players.map(p => `<th class="num">${esc(pname(p))}</th>`).join('') + '</tr></thead><tbody>' +
+        st.history.map(r => `<tr><td>${r.deal}</td>` + r.rows.map(x => `<td class="num ${x.winner ? 'winc' : ''}">${fmt(x.score)}</td>`).join('') + '</tr>').join('') +
+        `<tr class="sum"><td>Σ</td>` + st.players.map(p => `<td class="num"><b>${p.total}</b></td>`).join('') + '</tr></tbody></table></div>' +
+        (st.history.length ? '' : `<p class="note">${tr('sc_none')}</p>`) + `<div class="row"><button class="btn" data-act="close">${tr('close')}</button></div>`;
+    } else if (modal.type === 'names') {
+      let b = 0;
+      h = `<h2>${tr('nm_title')}</h2><form id="fNames" class="names">` + st.players.map((p, i) => {
+        const lab = i === ME ? tr('nm_you') : tr('nm_bot', ++b);
+        return `<label for="nm${i}">${lab}</label><input id="nm${i}" maxlength="14" value="${esc(pname(p))}" autocomplete="off">`;
+      }).join('') + `<p class="note">${tr('nm_note')}</p><div class="row"><button type="button" class="btn ghost" data-act="close">${tr('cancel')}</button><button class="btn" type="submit">${tr('nm_save')}</button></div></form>`;
+    } else if (modal.type === 'new') {
+      h = `<h2>${tr('b_newGame')}</h2><form id="fNew"><label for="inName">${tr('n_name')}</label><input id="inName" maxlength="14" value="${esc(st ? pname(st.players[ME]) : tr('you'))}">
+        <label for="inN">${tr('n_players')}</label><select id="inN">${[2, 3, 4, 5, 6].map(x => `<option value="${x}" ${x === 4 ? 'selected' : ''}>${tr('n_opt', x, x - 1)}</option>`).join('')}</select>
+        <label for="inL">${tr('n_level')}</label><select id="inL">${LEVELS.map(l => `<option value="${l}" ${l === ((st && st.level) || savedLevel()) ? 'selected' : ''}>${tr('lv_' + l)}</option>`).join('')}</select>
+        <p class="note">${tr('n_reset')}</p><div class="row"><button type="button" class="btn ghost" data-act="close">${tr('cancel')}</button><button class="btn" type="submit">${tr('n_dealBtn')}</button></div></form>`;
+    } else if (modal.type === 'rules') {
+      h = $('rules-' + I.getLang()).innerHTML + `<div class="row"><button class="btn" data-act="close">${tr('close')}</button></div>`;
+    }
+    box.innerHTML = '<div class="sheet" role="dialog" aria-modal="true">' + h + '</div>';
+    box.hidden = false;
+  }
+  const fmt = x => (x > 0 ? '+' : '') + x;
+
+  // ---------- действия игрока ----------
+  function act(r, okText) {
+    if (!r.ok) { say(r.err, true); return false; }
+    say(okText || ''); return true;
+  }
+  function doMeld() {
+    const ids = [...sel], cards = ids.map(id => st.players[ME].hand.find(c => c.id === id));
+    const opts = E.meldOptions(cards);
+    const go = i => { const r = E.playMeld(st, ids, i); if (act(r)) { st.log.splice(r.gone ? st.log.length - 1 : st.log.length, 0, { p: ME, k: 'l_meld', a: meldText(r.meld) }); sel.clear(); } done(); };
+    if (opts.length > 1) { modal = { type: 'choose', title: tr('c_joker'), options: opts.map((o, i) => ({ label: meldText(o), fn: () => go(i) })) }; render(); }
+    else go(0);
+  }
+  function doLayoff(mid) {
+    const m = st.melds.find(x => x.id === mid), hand = st.players[ME].hand;
+    if (!sel.size) { say(tr('m_pickFirst'), true); return render(); }
+    const one = (id, i) => {
+      const c = hand.find(x => x.id === id), r = E.layoff(st, mid, id, i);
+      if (r.ok) { sel.delete(id); st.log.splice(r.gone ? st.log.length - 1 : st.log.length, 0, { p: ME, k: r.swap ? 'l_swap' : 'l_add', a: lbl(c) }); if (r.swap) say(tr('m_gotJoker')); }
+      return r;
+    };
+    if (sel.size === 1) {
+      const id = [...sel][0], c = hand.find(x => x.id === id), opts = E.layoffOptions(m, c);
+      if (opts.length > 1) {
+        modal = { type: 'choose', title: tr('c_where'), options: opts.map((o, i) => ({ label: o.k === 'swap' ? tr('c_swap') : tr(o.end === 'lo' ? 'c_lo' : 'c_hi', o.pts), fn: () => { const r = one(id, i); if (!r.ok) say(r.err, true); done(); } })) };
+        return render();
+      }
+      const r = one(id, 0); if (!r.ok) say(r.err, true); else if (!r.swap) say('');
+      return done();
+    }
+    let progress = true, any = false, gone = false; say('');
+    while (progress && !gone) {
+      progress = false;
+      for (const id of [...sel]) { const c = hand.find(x => x.id === id); if (c && E.layoffOptions(m, c).length) { const r = one(id, 0); if (r.ok) { progress = true; any = true; if (r.gone) { gone = true; break; } } } }
+    }
+    if (sel.size) say(tr(any ? 'm_notAll' : 'm_none'), true);
+    done();
+  }
+  function doDiscard() {
+    const id = [...sel][0], c = st.players[ME].hand.find(x => x.id === id);
+    const r = E.discard(st, id);
+    if (act(r)) { log(ME, r.end ? 'l_dropEnd' : 'l_drop', lbl(c)); sel.clear(); }
+    done();
+  }
+  let hintMeld = null;
+  function done() { hintMeld = null; if (modal && modal.type === 'choose') modal = null; save(); render(); tick(); }
+
+  function tick() {
+    clearTimeout(timer);
+    if (!st || st.phase !== 'play' || !st.players[st.turn.p].bot) return;
+    const p = st.turn.p;
+    timer = setTimeout(() => {
+      let ev;
+      try { ev = B.step(st); }
+      catch (e) {           // страховка: бот просто берёт и сбрасывает
+        if (st.turn.phase === 'play') E.resetTurn(st);
+        if (st.turn.phase === 'draw') E.draw(st, 'stock');
+        if (st.phase === 'play') { const h = st.players[p].hand; E.discard(st, h[h.length - 1].id); }
+        ev = { k: 'l_pass' };
+      }
+      log(p, ev.k, ev.a);
+      save(); render(); tick();
+    }, st.turn.phase === 'draw' ? 550 : 800);
+  }
+
+  document.addEventListener('click', ev => {
+    const el = ev.target.closest('[data-act]'); if (!el || el.disabled) return;
+    const a = el.dataset.act, t = st.turn, myTurn = st.phase === 'play' && t.p === ME;
+    if (a === 'card') { if (Date.now() - dragEnd < 350) return; const id = +el.dataset.id; if (sel.has(id)) sel.delete(id); else sel.add(id); hintMeld = null; if (msgErr) say(''); render(); }
+    else if (a === 'bHint') { const r = H51.hint(st, ME); sel = new Set(r.select); hintMeld = r.meld; say(tr.apply(null, [r.k].concat(r.a))); render(); }
+    else if (a === 'stock' && myTurn) { if (act(E.draw(st, 'stock'))) log(ME, 'l_stock'); done(); }
+    else if (a === 'disc' && myTurn) {
+      const top = st.discard[st.discard.length - 1];
+      if (act(E.draw(st, 'discard'), tr('m_took'))) { log(ME, 'l_disc', lbl(top)); B.noteTake(st, ME, top); }
+      done();
+    }
+    else if (a === 'meld' && myTurn && t.phase === 'play') doLayoff(+el.dataset.mid);
+    else if (a === 'bMeld') doMeld();
+    else if (a === 'bDisc') doDiscard();
+    else if (a === 'bUndo') { if (act(E.resetTurn(st), tr('m_undone'))) sel.clear(); done(); }
+    else if (a === 'sortS') { sortHand('suit'); save(); render(); }
+    else if (a === 'sortR') { sortHand('rank'); save(); render(); }
+    else if (a === 'opt') modal.options[+el.dataset.i].fn();
+    else if (a === 'toggleScore') { scoreOpen = !scoreOpen; store.set(KEY + '-score', scoreOpen ? '1' : '0'); render(); }
+    else if (a === 'lang') { I.setLang(I.getLang() === 'ru' ? 'en' : 'ru'); store.set(KEY + '-lang', I.getLang()); say(''); render(); }
+    else if (a === 'close') { modal = null; render(); }
+    else if (a === 'scores') { modal = { type: 'scores' }; render(); }
+    else if (a === 'rules') { modal = { type: 'rules' }; render(); }
+    else if (a === 'new') { modal = { type: 'new' }; render(); }
+    else if (a === 'names') { modal = { type: 'names' }; render(); const f = $('nm' + ME); if (f && window.innerWidth > 700) f.focus(); }
+    else if (a === 'next') { E.startDeal(st); afterDeal(); }
+  });
+  document.addEventListener('submit', ev => {
+    ev.preventDefault();
+    if (ev.target.id === 'fNew') newGame($('inName').value.trim() || tr('you'), +$('inN').value, $('inL').value);
+    if (ev.target.id === 'fNames') {
+      const custom = botNames(); let b = 0;
+      st.players.forEach((p, i) => {
+        const v = ($('nm' + i).value || '').trim().replace(/\s+/g, ' ').slice(0, 14);
+        if (i === ME) { p.name = v || tr('you'); return; }
+        const k = b++, def = BOTS.ru[k] || p.name;
+        if (!v || v === BOTS.ru[k] || v === BOTS.en[k]) { p.name = def; custom[k] = ''; } else { p.name = v; custom[k] = v; }
+      });
+      store.set(KEY + '-bots', JSON.stringify(custom));
+      modal = null; save(); render();
+    }
+  });
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && modal && modal.type !== 'result') { modal = null; render(); } });
+
+  // сохранённая партия могла остаться от старой версии — если не рисуется, начинаем новую
+  let resumed = false;
+  try { if (load()) { render(); resumed = true; tick(); } } catch (e) { st = null; modal = null; resumed = false; store.set(KEY, ''); }
+  if (!resumed) newGame(tr('you'), 4, savedLevel());
+
+  // внутри Telegram: имя игрока и язык берём из профиля, если человек сам их ещё не выбирал
+  if (window.TG51 && window.TG51.active) window.TG51.onUser(user => {
+    if (!user || !st) return;
+    if (!store.get(KEY + '-lang') && user.language_code) I.setLang(String(user.language_code).toLowerCase().startsWith('ru') ? 'ru' : 'en');
+    const me = st.players[ME], first = String(user.first_name || '').trim().replace(/\s+/g, ' ').slice(0, 14);
+    if (first && (me.name === 'Вы' || me.name === 'You')) { me.name = first; save(); }
+    render();
+  });
+})();
+</script>
+</body>
+</html>
