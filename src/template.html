@@ -80,7 +80,12 @@ header h1{font:700 19px var(--display);margin:0;letter-spacing:.02em}
 .pile .card{--cw:clamp(40px,6vw,56px)}
 .pile{background:none;border:0;padding:4px;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:2px}
 .pile:disabled{cursor:default;opacity:1}
-.pile.hot .card{box-shadow:0 0 0 3px var(--gold),0 2px 8px rgba(0,0,0,.5)}
+.pile.hot .card{box-shadow:0 0 0 3px var(--gold),0 2px 8px rgba(0,0,0,.5);animation:pilePulse 1.3s ease-in-out infinite}
+/* ваш ход, карта ещё не взята: колода и сброс мягко пульсируют; при попытке ходить без карты — встряхиваются */
+@keyframes pilePulse{0%,100%{box-shadow:0 0 0 3px var(--gold),0 2px 8px rgba(0,0,0,.5);transform:none}50%{box-shadow:0 0 0 5px var(--gold),0 0 20px 8px rgba(227,178,76,.65);transform:translateY(-3px) scale(1.05)}}
+@keyframes pileNudge{0%,100%{transform:none}20%{transform:translateX(-6px) rotate(-4deg)}40%{transform:translateX(6px) rotate(4deg)}60%{transform:translateX(-4px) rotate(-2deg)}80%{transform:translateX(4px) rotate(2deg)}}
+#piles.nudge .pile.hot .card{animation:pileNudge .45s ease-in-out 2}
+@media (prefers-reduced-motion:reduce){.pile.hot .card,#piles.nudge .pile.hot .card{animation:none}}
 .cap{font-size:12px;color:var(--mist)}
 #status{flex:1;min-width:0;margin:0;font-size:14px;min-height:2.8em;display:flex;align-items:center}
 #status.err{color:var(--bad)}

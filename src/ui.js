@@ -281,6 +281,13 @@
     done();
   }
   let hintMeld = null;
+  // игрок пытается ходить, не взяв карту: напомнить и встряхнуть колоду со сбросом
+  let nudgeTimer = null;
+  function nudgeDraw() {
+    say(tr('m_drawFirst'), true);
+    const p = $('piles'); p.classList.remove('nudge'); void p.offsetWidth; p.classList.add('nudge');
+    clearTimeout(nudgeTimer); nudgeTimer = setTimeout(() => p.classList.remove('nudge'), 1000);
+  }
   function done() { hintMeld = null; if (modal && modal.type === 'choose') modal = null; save(); render(); tick(); }
 
   function tick() {
@@ -304,7 +311,8 @@
   document.addEventListener('click', ev => {
     const el = ev.target.closest('[data-act]'); if (!el || el.disabled) return;
     const a = el.dataset.act, t = st.turn, myTurn = st.phase === 'play' && t.p === ME;
-    if (a === 'card') { if (Date.now() - dragEnd < 350) return; const id = +el.dataset.id; if (sel.has(id)) sel.delete(id); else sel.add(id); hintMeld = null; if (msgErr) say(''); render(); }
+    if (a === 'card') { if (Date.now() - dragEnd < 350) return; const id = +el.dataset.id;
+      if (myTurn && t.phase === 'draw') nudgeDraw(); if (sel.has(id)) sel.delete(id); else sel.add(id); hintMeld = null; if (msgErr && !(myTurn && t.phase === 'draw')) say(''); render(); }
     else if (a === 'bHint') { const r = H51.hint(st, ME); sel = new Set(r.select); hintMeld = r.meld; say(tr.apply(null, [r.k].concat(r.a))); render(); }
     else if (a === 'stock' && myTurn) { if (act(E.draw(st, 'stock'))) log(ME, 'l_stock'); done(); }
     else if (a === 'disc' && myTurn) {
