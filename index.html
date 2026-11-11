@@ -30,6 +30,7 @@ header h1{font:700 19px var(--display);margin:0;letter-spacing:.02em}
 #deal{color:var(--mist);margin-right:auto;font-variant-numeric:tabular-nums}
 .btn{background:var(--gold);color:#2a1f08;border:0;border-radius:8px;padding:9px 14px;font-weight:700;min-height:40px}
 .btn.ghost{background:transparent;color:var(--ivory);box-shadow:inset 0 0 0 1px rgba(251,246,233,.35);font-weight:500}
+.btn.ghost.on{background:var(--gold);color:#2a1f08;box-shadow:none;font-weight:700}
 .btn.sm{padding:6px 10px;min-height:34px;font-size:14px}
 .btn:disabled{opacity:.38;cursor:default}
 #arena{flex:1 1 0;min-height:250px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr);gap:8px;padding:4px 16px}
@@ -242,7 +243,7 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
     <div id="rightSeat"></div>
   </div>
   <div id="mid"><p id="status" aria-live="polite"></p><div id="piles"></div></div>
-  <div id="merow"><div id="me"></div><button class="btn ghost sm" data-act="sortS" data-i18n="b_sortS">По мастям</button><button class="btn ghost sm" data-act="sortR" data-i18n="b_sortR">По рангу</button></div>
+  <div id="merow"><div id="me"></div><button class="btn ghost sm" id="bSortS" data-act="sortS" data-i18n="b_sortS">По мастям</button><button class="btn ghost sm" id="bSortR" data-act="sortR" data-i18n="b_sortR">По рангу</button></div>
   <div id="hand"></div>
   <div id="bar">
     <button class="btn" id="bMeld" data-act="bMeld" data-i18n="b_meld">Выложить</button>
@@ -1059,7 +1060,7 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
   'use strict';
   const E = window.E51, B = window.B51, I = window.I51, tr = I.tr, ME = 0, KEY = 'game51-v1';
   const BOTS = { ru: ['Айна', 'Батыр', 'Вера', 'Гена', 'Дарья'], en: ['Aina', 'Batyr', 'Vera', 'Gena', 'Darya'] };
-  let st = null, sel = new Set(), order = [], msg = '', msgErr = false, timer = null, modal = null;
+  let st = null, sel = new Set(), order = [], sortMode = null, msg = '', msgErr = false, timer = null, modal = null;
   const $ = id => document.getElementById(id);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const lbl = B.label;
@@ -1067,9 +1068,9 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
 
   I.setLang(store.get(KEY + '-lang') || ((navigator.language || 'ru').toLowerCase().startsWith('ru') ? 'ru' : 'en'));
 
-  function save() { store.set(KEY, JSON.stringify({ st, order })); }
+  function save() { store.set(KEY, JSON.stringify({ st, order, sortMode })); }
   function load() {
-    try { const d = JSON.parse(store.get(KEY)); if (d && d.st && d.st.players && d.st.turn) { st = d.st; order = d.order || []; return true; } } catch (e) { /* нет сохранения */ }
+    try { const d = JSON.parse(store.get(KEY)); if (d && d.st && d.st.players && d.st.turn) { st = d.st; order = d.order || []; sortMode = d.sortMode === 'suit' || d.sortMode === 'rank' ? d.sortMode : null; return true; } } catch (e) { /* нет сохранения */ }
     return false;
   }
   function say(t, isErr) { msg = t || ''; msgErr = !!isErr; }
@@ -1096,14 +1097,17 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
     st = E.newGame(ps); st.level = LEVELS.includes(level) ? level : 'normal'; store.set(KEY + '-level', st.level); E.startDeal(st);
     afterDeal();
   }
-  function afterDeal() { sel.clear(); modal = null; say(''); sortHand('suit'); save(); render(); tick(); }
+  function afterDeal() { sel.clear(); modal = null; say(''); sortHand(sortMode || 'suit'); save(); render(); tick(); }
+  // выбранная раскладка держится сама: новая карта встаёт на своё место; перетаскивание её отключает
   function sortHand(mode) {
+    sortMode = mode;
     const h = st.players[ME].hand.slice();
     const key = c => E.isJ(c) ? 9999 : (mode === 'suit' ? c.s * 20 + c.r : c.r * 10 + c.s);
     h.sort((a, b) => key(a) - key(b));
     order = h.map(c => c.id);
   }
   function myHand() {
+    if (sortMode && !(drag && drag.on)) sortHand(sortMode);
     const h = st.players[ME].hand.slice();
     const pos = id => { const i = order.indexOf(id); return i < 0 ? 1e6 + id : i; };
     h.sort((a, b) => pos(a.id) - pos(b.id));
@@ -1212,6 +1216,7 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
     const t = st.turn, myTurn = st.phase === 'play' && t.p === ME;
     $('hand').innerHTML = myHand().map(c => cardHTML(c, 'button', (sel.has(c.id) ? 'sel ' : '') + (myTurn && t.drew === c.id ? 'new ' : '') + (drag && drag.on && drag.id === c.id ? 'drag' : ''))).join('');
     fitHand();
+    for (const [id, mode] of [['bSortS', 'suit'], ['bSortR', 'rank']]) { $(id).classList.toggle('on', sortMode === mode); $(id).setAttribute('aria-pressed', sortMode === mode); }
   }
   // на телефоне рука идёт одним рядом: чем меньше карт, тем шире шаг между ними
   function fitHand() {
@@ -1234,7 +1239,7 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
   });
   document.addEventListener('pointermove', ev => {
     if (!drag) return;
-    if (!drag.on) { if (Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) < 10) return; drag.on = true; renderHand(); }
+    if (!drag.on) { if (Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) < 10) return; drag.on = true; sortMode = null; renderHand(); }
     const el = document.elementFromPoint(ev.clientX, ev.clientY), tgt = el && el.closest('#hand .card');
     if (!tgt) return;
     const tid = +tgt.dataset.id; if (tid === drag.id) return;

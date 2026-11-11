@@ -2,7 +2,7 @@
   'use strict';
   const E = window.E51, B = window.B51, I = window.I51, tr = I.tr, ME = 0, KEY = 'game51-v1';
   const BOTS = { ru: ['Айна', 'Батыр', 'Вера', 'Гена', 'Дарья'], en: ['Aina', 'Batyr', 'Vera', 'Gena', 'Darya'] };
-  let st = null, sel = new Set(), order = [], msg = '', msgErr = false, timer = null, modal = null;
+  let st = null, sel = new Set(), order = [], sortMode = null, msg = '', msgErr = false, timer = null, modal = null;
   const $ = id => document.getElementById(id);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const lbl = B.label;
@@ -10,9 +10,9 @@
 
   I.setLang(store.get(KEY + '-lang') || ((navigator.language || 'ru').toLowerCase().startsWith('ru') ? 'ru' : 'en'));
 
-  function save() { store.set(KEY, JSON.stringify({ st, order })); }
+  function save() { store.set(KEY, JSON.stringify({ st, order, sortMode })); }
   function load() {
-    try { const d = JSON.parse(store.get(KEY)); if (d && d.st && d.st.players && d.st.turn) { st = d.st; order = d.order || []; return true; } } catch (e) { /* нет сохранения */ }
+    try { const d = JSON.parse(store.get(KEY)); if (d && d.st && d.st.players && d.st.turn) { st = d.st; order = d.order || []; sortMode = d.sortMode === 'suit' || d.sortMode === 'rank' ? d.sortMode : null; return true; } } catch (e) { /* нет сохранения */ }
     return false;
   }
   function say(t, isErr) { msg = t || ''; msgErr = !!isErr; }
@@ -39,14 +39,17 @@
     st = E.newGame(ps); st.level = LEVELS.includes(level) ? level : 'normal'; store.set(KEY + '-level', st.level); E.startDeal(st);
     afterDeal();
   }
-  function afterDeal() { sel.clear(); modal = null; say(''); sortHand('suit'); save(); render(); tick(); }
+  function afterDeal() { sel.clear(); modal = null; say(''); sortHand(sortMode || 'suit'); save(); render(); tick(); }
+  // выбранная раскладка держится сама: новая карта встаёт на своё место; перетаскивание её отключает
   function sortHand(mode) {
+    sortMode = mode;
     const h = st.players[ME].hand.slice();
     const key = c => E.isJ(c) ? 9999 : (mode === 'suit' ? c.s * 20 + c.r : c.r * 10 + c.s);
     h.sort((a, b) => key(a) - key(b));
     order = h.map(c => c.id);
   }
   function myHand() {
+    if (sortMode && !(drag && drag.on)) sortHand(sortMode);
     const h = st.players[ME].hand.slice();
     const pos = id => { const i = order.indexOf(id); return i < 0 ? 1e6 + id : i; };
     h.sort((a, b) => pos(a.id) - pos(b.id));
@@ -155,6 +158,7 @@
     const t = st.turn, myTurn = st.phase === 'play' && t.p === ME;
     $('hand').innerHTML = myHand().map(c => cardHTML(c, 'button', (sel.has(c.id) ? 'sel ' : '') + (myTurn && t.drew === c.id ? 'new ' : '') + (drag && drag.on && drag.id === c.id ? 'drag' : ''))).join('');
     fitHand();
+    for (const [id, mode] of [['bSortS', 'suit'], ['bSortR', 'rank']]) { $(id).classList.toggle('on', sortMode === mode); $(id).setAttribute('aria-pressed', sortMode === mode); }
   }
   // на телефоне рука идёт одним рядом: чем меньше карт, тем шире шаг между ними
   function fitHand() {
@@ -177,7 +181,7 @@
   });
   document.addEventListener('pointermove', ev => {
     if (!drag) return;
-    if (!drag.on) { if (Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) < 10) return; drag.on = true; renderHand(); }
+    if (!drag.on) { if (Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) < 10) return; drag.on = true; sortMode = null; renderHand(); }
     const el = document.elementFromPoint(ev.clientX, ev.clientY), tgt = el && el.closest('#hand .card');
     if (!tgt) return;
     const tid = +tgt.dataset.id; if (tid === drag.id) return;
