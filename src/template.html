@@ -95,7 +95,9 @@ header h1{font:700 19px var(--display);margin:0;letter-spacing:.02em}
 #hand .card{margin-right:calc(var(--cw)*-.3);touch-action:none;user-select:none;-webkit-user-select:none}
 #hand .card.drag{transform:translateY(-14px) scale(1.07);box-shadow:0 0 0 3px var(--mist),0 10px 16px rgba(0,0,0,.55);z-index:2}
 #hand .card.sel{transform:translateY(-10px);box-shadow:0 0 0 3px var(--gold),0 6px 10px rgba(0,0,0,.5)}
-#hand .card.new::after{content:"";position:absolute;right:8%;top:6%;width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 1px #2a1f08}
+/* только что взятая карта: приподнята и с золотой полосой снизу — видно и под соседними картами */
+#hand .card.new:not(.sel):not(.drag){transform:translateY(-7px)}
+#hand .card.new::after{content:"";position:absolute;left:0;right:0;bottom:0;height:calc(var(--cw)*.13);background:var(--gold);border-radius:0 0 calc(var(--cw)*.11) calc(var(--cw)*.11)}
 #bar{display:flex;gap:8px;padding:6px 16px 14px;flex-wrap:wrap;align-items:center}
 #bar .sp{flex:1}
 #score{flex:none;width:300px;height:100%;overflow-y:auto;background:var(--rim);padding:12px 14px;border-left:1px solid rgba(251,246,233,.14)}
