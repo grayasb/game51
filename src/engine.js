@@ -166,10 +166,36 @@
     return OK;
   }
   // отмена хода: взятое из сброса возвращается (снова выбор, откуда брать), взятое из колоды остаётся
+  // Отмена по шагам: перед каждой выкладкой и докладыванием запоминаем положение дел.
+  const COUNTERS = ['laidPts', 'jokersLaid', 'ownMelds', 'adds', 'swapped'];
+  function pushUndo(st) {
+    const t = st.turn;
+    if (st.players[t.p].bot) return;                 // ботам отмена не нужна
+    const c = {}; COUNTERS.forEach(k => { c[k] = t[k]; });
+    (t.undo = t.undo || []).push({ s: snap(st), c: clone(c), log: st.log.length });
+  }
+  // Шаг назад: отменяет последнее действие хода. Когда действий не осталось, возвращает карту, взятую из сброса.
+  // Карту из колоды вернуть нельзя — её уже видели.
+  function undoStep(st) {
+    const t = st.turn;
+    if (st.phase !== 'play' || t.phase !== 'play') return err(tr('e_noundo'));
+    if (t.undo && t.undo.length) {
+      const u = t.undo.pop();
+      restore(st, u.s); Object.assign(t, clone(u.c));
+      if (st.log.length > u.log) st.log.length = u.log;
+      return { ok: true, left: t.undo.length };
+    }
+    if (t.took != null) { const r = resetTurn(st); return r.ok ? { ok: true, untook: true } : r; }
+    return err(tr('e_noundo'));
+  }
+  function canUndo(st) {
+    const t = st.turn;
+    return st.phase === 'play' && t.phase === 'play' && ((t.undo && t.undo.length > 0) || t.took != null);
+  }
   function resetTurn(st) {
     const t = st.turn;
     if (st.phase !== 'play' || t.phase !== 'play') return err(tr('e_noundo'));
-    freshTurnCounters(t);
+    freshTurnCounters(t); t.undo = [];
     if (t.took != null) { restore(st, t.pre); t.took = null; t.drew = null; t.phase = 'draw'; }
     else restore(st, t.post);
     return OK;
@@ -197,6 +223,7 @@
     if (!opts.length) return err(tr('e_notMeld'));
     if (pl.hand.length - cards.length < 1) return err(tr('e_keepOne'));
     const m = opts[optIndex || 0];
+    pushUndo(st);
     m.id = st.nextMeld++; m.owner = t.p;
     pl.hand = pl.hand.filter(c => !ids.includes(c.id));
     st.melds.push(m);
@@ -212,6 +239,7 @@
     if (!opts.length) return err(tr('e_noFit'));
     const o = opts[optIndex || 0];
     if (o.k === 'add' && pl.hand.length - 1 < 1) return err(tr('e_keepOne'));
+    pushUndo(st);
     pl.hand = pl.hand.filter(c => c.id !== cardId);
     t.laidPts += o.pts; if (isJ(card)) t.jokersLaid++;
     if (o.k === 'swap') {
@@ -268,7 +296,7 @@
 
   const api = {
     SUITS, RANKS, DEALS, OPEN_MIN, isJ, rankVal, mkDeck, meldOptions, meldValue, cardValueIn, jokerMeaning,
-    layoffOptions, newGame, startDeal, identicalPairs, draw, resetTurn, playMeld, layoff, discard, needsOpen, handPenalty, clone
+    layoffOptions, newGame, startDeal, identicalPairs, draw, resetTurn, undoStep, canUndo, playMeld, layoff, discard, needsOpen, handPenalty, clone
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.E51 = api;
 })(typeof window !== 'undefined' ? window : globalThis);

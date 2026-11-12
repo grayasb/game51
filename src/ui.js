@@ -133,7 +133,7 @@
     const play = myTurn && t.phase === 'play';
     $('bMeld').disabled = !(play && sel.size >= 3);
     $('bDisc').disabled = !(play && sel.size === 1);
-    $('bUndo').disabled = !play;
+    $('bUndo').disabled = !E.canUndo(st) || !myTurn;
     $('bHint').disabled = !myTurn;
     renderScore();
     renderModal();
@@ -323,7 +323,7 @@
     else if (a === 'meld' && myTurn && t.phase === 'play') doLayoff(+el.dataset.mid);
     else if (a === 'bMeld') doMeld();
     else if (a === 'bDisc') doDiscard();
-    else if (a === 'bUndo') { if (act(E.resetTurn(st), tr('m_undone'))) sel.clear(); done(); }
+    else if (a === 'bUndo') { const r = E.undoStep(st); if (act(r, tr(r.untook ? 'm_untook' : 'm_undone'))) { sel.clear(); hintMeld = null; } done(); }
     else if (a === 'sortS') { sortHand('suit'); save(); render(); }
     else if (a === 'sortR') { sortHand('rank'); save(); render(); }
     else if (a === 'opt') modal.options[+el.dataset.i].fn();

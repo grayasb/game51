@@ -21,3 +21,34 @@ ok(E.playMeld(st,[h.d2.id,h.d3.id,jk[0].id],1),'2♦ 3♦ джокер');
 ok(E.layoff(st,st.melds.find(m=>m.type==='set'&&m.rank===12).id,h.dQ.id),'Q♦ к дамам');
 r=E.discard(st,h.s3.id);ok(r,'сброс 3♠');
 console.log('открыт:',st.players[0].opened,'осталось карт:',st.players[0].hand.length);
+
+// --- отмена по шагам ---
+{
+  let id = 1; const c = (r, s) => ({ id: id++, r, s });
+  const st = E.newGame([{ name: 'Вы' }, { name: 'b', bot: true }], () => 0.5); E.startDeal(st, Math.random);
+  const run = [c(9, 0), c(10, 0), c(11, 0)], set = [c(5, 1), c(5, 2), c(5, 3)], extra = [c(12, 0), c(2, 3)];
+  st.melds = []; st.players[0].hand = [...run, ...set, ...extra];
+  st.turn.p = 0; st.turn.wasOpened = false; st.players[0].opened = false;
+  st.discard.push(c(13, 0)); st.stock.push(c(4, 2));
+  assert(E.draw(st, 'stock').ok && !E.canUndo(st), 'после взятия из колоды отменять нечего');
+  assert(!E.undoStep(st).ok);
+  assert(E.playMeld(st, run.map(x => x.id)).ok);                        // шаг 1: ряд 9-10-J = 29
+  assert(E.playMeld(st, set.map(x => x.id)).ok);                        // шаг 2: три пятёрки = 15
+  assert(E.layoff(st, st.melds[0].id, extra[0].id).ok);                 // шаг 3: дама к ряду = 10
+  assert(st.turn.laidPts === 54 && st.melds.length === 2 && st.players[0].hand.length === 2);
+  let r = E.undoStep(st); assert(r.ok && r.left === 2 && st.turn.laidPts === 44 && st.melds[0].cards.length === 3 && st.players[0].hand.length === 3, 'шаг 3 отменён');
+  r = E.undoStep(st); assert(r.ok && r.left === 1 && st.turn.laidPts === 29 && st.melds.length === 1 && st.turn.ownMelds === 1, 'шаг 2 отменён');
+  assert(E.playMeld(st, set.map(x => x.id)).ok && st.turn.laidPts === 44, 'после отмены можно сыграть иначе');
+  r = E.undoStep(st); r = E.undoStep(st);
+  assert(r.ok && r.left === 0 && st.melds.length === 0 && st.turn.laidPts === 0 && st.players[0].hand.length === 9, 'всё вернулось в руку');
+  assert(!E.undoStep(st).ok && st.turn.phase === 'play', 'карта из колоды остаётся');
+  // взятие из сброса отменяется последним шагом
+  const st2 = E.newGame([{ name: 'Вы' }, { name: 'b', bot: true }], () => 0.5); E.startDeal(st2, Math.random);
+  const k = c(13, 0), h2 = [c(11, 0), c(12, 0), c(3, 1)];
+  st2.players[0].hand = h2.slice(); st2.turn.p = 0; st2.discard.push(k);
+  assert(E.draw(st2, 'discard').ok && E.canUndo(st2));
+  assert(E.playMeld(st2, [h2[0].id, h2[1].id, k.id]).ok);
+  r = E.undoStep(st2); assert(r.ok && !r.untook && st2.turn.phase === 'play' && st2.players[0].hand.length === 4);
+  r = E.undoStep(st2); assert(r.ok && r.untook && st2.turn.phase === 'draw' && st2.discard[st2.discard.length - 1].id === k.id && st2.players[0].hand.length === 3, 'карта вернулась в сброс');
+  console.log('отмена по шагам: ок');
+}
