@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Игры</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;700&family=Unbounded:wght@600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* layout: a heading and a single column of game tiles, each with a small picture, a name and one line about the game */
+  --table:#1c2740;
+  --table-hi:#28365a;
+  --paper:#f2eee2;
+  --ink:#1a2030;
+  --red:#c0352b;
+  --amber:#f0a21a;
+  --teal:#19a08a;
+  --text:#e9edf6;
+  --muted:#9aa6c2;
+  --display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--table);color:var(--text);font-family:var(--body);font-size:16px;padding:22px 16px 28px;-webkit-tap-highlight-color:transparent}
+main{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font-family:var(--display);font-weight:600;font-size:24px;margin:0 0 4px;text-wrap:balance}
+.lead{margin:0 0 6px;color:var(--muted);line-height:1.4}
+a.tile{
+  display:flex;align-items:center;gap:14px;text-decoration:none;color:inherit;
+  background:var(--table-hi);border-radius:16px;padding:12px 14px 12px 12px;border:2px solid transparent;
+}
+a.tile:active{border-color:var(--amber)}
+a.tile:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.pic{flex:none;width:84px;height:84px;border-radius:12px;background:var(--table);position:relative;overflow:hidden}
+.txt{min-width:0;flex:1;display:flex;flex-direction:column;gap:4px}
+.txt b{font-size:18px;font-weight:700}
+.txt span{color:var(--muted);font-size:14px;line-height:1.35}
+.go{flex:none;color:var(--amber);font-size:22px;font-weight:700}
+
+/* pictures: plain shapes, no outside images */
+.mini{position:absolute;background:var(--paper);border-radius:5px;color:var(--ink);font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;width:34px;height:48px;box-shadow:0 2px 4px rgba(0,0,0,.35)}
+.p51 .mini:nth-child(1){left:10px;top:20px;transform:rotate(-12deg)}
+.p51 .mini:nth-child(2){left:25px;top:16px;color:var(--red)}
+.p51 .mini:nth-child(3){left:40px;top:20px;transform:rotate(12deg)}
+.p5 .g{position:absolute;inset:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:3px}
+.p5 .g i{background:var(--paper);border-radius:3px;position:relative}
+.p5 .g i.a::after,.p5 .g i.b::after{content:"";position:absolute;inset:2px;border-radius:50%}
+.p5 .g i.a::after{background:var(--amber)} .p5 .g i.b::after{background:var(--teal)}
+.pr .sky{position:absolute;inset:0;background:#2b4a7a}
+.pr .gr{position:absolute;left:0;right:0;bottom:0;height:20px;background:#3d7a4a}
+.pr .pl{position:absolute;left:44px;bottom:38px;width:30px;height:9px;background:#8a5a34;border-radius:3px}
+.pr .cat{position:absolute;left:16px;bottom:20px;width:20px;height:18px;background:#e08a2e;border-radius:6px 6px 4px 4px}
+.pr .cat::before,.pr .cat::after{content:"";position:absolute;top:-6px;border:5px solid transparent;border-bottom-color:#e08a2e;border-top:0}
+.pr .cat::before{left:0} .pr .cat::after{right:0}
+.pr .coin{position:absolute;left:54px;bottom:54px;width:10px;height:10px;border-radius:50%;background:var(--amber)}
+</style>
+</head>
+<body>
+<main>
+  <h1 data-t="h">Игры</h1>
+  <p class="lead" data-t="lead">Выберите игру. Чтобы вернуться сюда, закройте игру и снова нажмите кнопку меню.</p>
+
+  <a class="tile" href="../">
+    <div class="pic p51"><div class="mini">K♠</div><div class="mini">Q♥</div><div class="mini">J♣</div></div>
+    <div class="txt"><b data-t="n1">Игра 51</b><span data-t="d1">Карточная игра рамми по домашним правилам, против ботов.</span></div>
+    <div class="go" aria-hidden="true">›</div>
+  </a>
+
+  <a class="tile" href="../sequence/">
+    <div class="pic p5"><div class="g"><i></i><i class="b"></i><i></i><i class="a"></i><i class="b"></i><i></i><i class="a"></i><i></i><i></i><i class="a"></i><i class="b"></i><i></i><i class="a"></i><i></i><i></i><i class="b"></i></div></div>
+    <div class="txt"><b data-t="n2">Пять в ряд</b><span data-t="d2">Карты и фишки на поле 10×10: соберите ряд раньше одного или двух ботов.</span></div>
+    <div class="go" aria-hidden="true">›</div>
+  </a>
+
+  <a class="tile" href="../platformer/">
+    <div class="pic pr"><div class="sky"></div><div class="gr"></div><div class="pl"></div><div class="coin"></div><div class="cat"></div></div>
+    <div class="txt"><b data-t="n3">Рыжик</b><span data-t="d3">Платформер: бегите, прыгайте и пройдите три уровня.</span></div>
+    <div class="go" aria-hidden="true">›</div>
+  </a>
+</main>
+<script>
+const T={en:{h:'Games',lead:'Pick a game. To come back here, close the game and tap the menu button again.',
+  n1:'Game 51',d1:'A rummy card game with house rules, against bots.',
+  n2:'Five in a Row',d2:'Cards and chips on a 10×10 board: complete a row before one or two bots.',
+  n3:'Ryzhik',d3:'A platformer: run, jump and clear three levels.'}};
+try{
+  const tg=window.Telegram&&window.Telegram.WebApp;
+  if(tg&&tg.initData!==undefined){
+    tg.ready();tg.expand();
+    if(tg.setHeaderColor)tg.setHeaderColor('#1c2740');
+    if(tg.setBackgroundColor)tg.setBackgroundColor('#1c2740');
+    const lc=tg.initDataUnsafe&&tg.initDataUnsafe.user&&tg.initDataUnsafe.user.language_code;
+    if(lc&&lc!=='ru'){
+      document.documentElement.lang='en';document.title=T.en.h;
+      document.querySelectorAll('[data-t]').forEach(el=>{el.textContent=T.en[el.dataset.t];});
+    }
+  }
+}catch(e){}
+</script>
+</body>
+</html>
