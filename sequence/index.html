@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Пять в ряд</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;700&family=Unbounded:wght@600&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  /* layout: one screen, column: score bar / square board that takes all spare room / hand of 7 cards / action line */
+  --table:#1c2740;      /* ink-blue table */
+  --table-hi:#28365a;
+  --tray:#111829;       /* the player's own area under the board */   /* raised surfaces on the table */
+  --paper:#f2eee2;      /* card faces and board cells */
+  --ink:#1a2030;        /* black suits, text on paper */
+  --red:#c0352b;        /* red suits */
+  --you:#f0a21a;        /* player's chips, also the accent */
+  --bot:#19a08a;        /* bot's chips */
+  --text:#e9edf6;
+  --muted:#9aa6c2;
+  --display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background:var(--table);color:var(--text);font-family:var(--body);font-size:15px;
+  display:flex;flex-direction:column;gap:10px;padding:10px 16px 12px;
+  -webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;overflow:hidden;
+}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--you);outline-offset:2px}
+
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h1{font-family:var(--display);font-size:16px;font-weight:600;margin:0;letter-spacing:.02em;margin-right:auto}
+.tools{display:flex;gap:6px}
+.tool{background:var(--table-hi);border:0;border-radius:8px;padding:7px 10px;font-size:13px;font-weight:500}
+.tool.warn{background:var(--red)}
+select.tool{appearance:none;-webkit-appearance:none;color:var(--text);max-width:150px}
+
+.score{display:flex;gap:8px;align-items:stretch}
+.side{flex:1;background:var(--table-hi);border-radius:10px;padding:7px 10px;display:flex;align-items:center;gap:8px;border:2px solid transparent;min-width:0}
+.side.turn{border-color:var(--text)}
+.dot{width:16px;height:16px;border-radius:50%;flex:none;box-shadow:inset 0 -2px 0 rgba(0,0,0,.25)}
+.dot.you{background:var(--you)} .dot.bot{background:var(--bot)}
+.side b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side .n{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+.side small{color:var(--muted);font-weight:400;white-space:nowrap;font-size:11px}
+.who{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+@media (max-width:520px){h1{display:none}.tools{flex:1}.tools .tool{flex:1;padding:7px 4px;text-align:center;font-size:12px;white-space:nowrap}}
+.deck{flex:none;background:transparent;border:1px dashed var(--muted);border-radius:10px;padding:4px 10px;display:flex;flex-direction:column;justify-content:center;align-items:center;line-height:1.15}
+.deck span{font-weight:700;font-variant-numeric:tabular-nums}
+.deck small{color:var(--muted);font-size:11px}
+
+.wrap{flex:1;min-height:0;display:grid;place-items:center;container-type:size}
+.board{
+  width:min(100cqw,100cqh);height:min(100cqw,100cqh);container-type:inline-size;
+  display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);gap:.6cqw;
+}
+.cell{
+  position:relative;border:0;padding:0;border-radius:1.2cqw;background:var(--paper);color:var(--ink);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;
+  font-weight:700;font-size:3.3cqw;min-width:0;
+}
+.cell .st{font-size:3.6cqw;margin-top:.2cqw}
+.cell.red{color:var(--red)}
+.cell.corner{background:var(--table-hi);color:var(--muted);font-size:4.6cqw}
+.cell.dim{opacity:.5}
+.cell.target{box-shadow:0 0 0 .7cqw var(--you);z-index:1}
+.cell.target.rm{box-shadow:0 0 0 .7cqw var(--red)}
+.cell.gone{box-shadow:0 0 0 .6cqw var(--red) inset}
+.chip{
+  position:absolute;inset:11%;border-radius:50%;opacity:.94;
+  box-shadow:inset 0 -.5cqw 0 rgba(0,0,0,.22),0 .3cqw .6cqw rgba(0,0,0,.35);
+}
+.chip.you{background:var(--you)} .chip.bot{background:var(--bot)}
+.chip.locked::after{content:"";position:absolute;inset:22%;border-radius:50%;border:.7cqw solid var(--ink)}
+.chip.last{outline:.6cqw solid var(--text);outline-offset:.3cqw}
+@media (prefers-reduced-motion:no-preference){
+  .chip.last{animation:pop .25s ease-out}
+  @keyframes pop{from{transform:scale(1.5)}to{transform:scale(1)}}
+}
+
+.tray{background:var(--tray);border-top:3px solid var(--you);margin:4px -16px -12px;padding:8px 8px 12px;display:flex;flex-direction:column;gap:8px;box-shadow:0 -6px 14px rgba(0,0,0,.3)}
+.trayhead,.action{padding-left:8px;padding-right:8px}
+.trayhead{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.trayhead .dot{width:10px;height:10px}
+.hand{display:flex;gap:4px;justify-content:center;padding-top:8px}
+.card{
+  flex:1;max-width:76px;aspect-ratio:5/7.6;border:0;border-radius:8px;background:var(--paper);color:var(--ink);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1;
+  font-weight:700;font-size:25px;position:relative;transition:transform .12s;
+}
+.card.red{color:var(--red)}
+.card .st{font-size:28px}
+.card .tag{position:absolute;top:2px;right:4px;font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--ink);opacity:.7}
+.card.sel{transform:translateY(-8px);box-shadow:0 0 0 3px var(--you)}
+.card.dead{opacity:.5}
+.card:disabled{cursor:default}
+
+.action{min-height:40px;display:flex;align-items:center;gap:10px;justify-content:space-between}
+.action p{margin:0;color:var(--text);line-height:1.3}
+.go{background:var(--you);color:var(--ink);border:0;border-radius:8px;padding:9px 14px;font-weight:700;white-space:nowrap}
+
+dialog{background:var(--table-hi);color:var(--text);border:0;border-radius:14px;padding:20px;max-width:min(440px,calc(100% - 32px));max-height:calc(100% - 32px)}
+dialog::backdrop{background:rgba(8,12,24,.7)}
+dialog h2{font-family:var(--display);font-size:17px;margin:0 0 12px;text-wrap:balance}
+dialog ul{margin:0 0 16px;padding-left:18px;line-height:1.45}
+dialog li{margin-bottom:6px}
+dialog p{margin:0 0 16px;line-height:1.45}
+</style>
+</head>
+<body>
+<header>
+  <h1 data-t="title">Пять в ряд</h1>
+  <div class="tools">
+    <button class="tool" id="bRules" data-t="rules">Правила</button>
+    <select class="tool" id="level" aria-label="Уровень бота"><option value="1"></option><option value="2"></option><option value="3"></option></select>
+    <button class="tool" id="bLang">EN</button>
+    <button class="tool" id="bNew" data-t="newGame">Новая игра</button>
+  </div>
+</header>
+
+<div class="score">
+  <div class="side" id="sYou"><i class="dot you"></i><b data-t="you">Вы</b><span class="n" id="nYou">0 / 2</span></div>
+  <div class="deck"><span id="nDeck">90</span><small data-t="deck">в колоде</small></div>
+  <div class="side" id="sBot"><i class="dot bot"></i><span class="who"><b data-t="bot">Бот</b><small id="nBotCards"></small></span><span class="n" id="nBot">0 / 2</span></div>
+</div>
+
+<div class="wrap"><div class="board" id="board"></div></div>
+
+<section class="tray">
+  <div class="trayhead"><i class="dot you"></i><span data-t="hand">Ваши карты</span></div>
+  <div class="hand" id="hand"></div>
+  <div class="action"><p id="msg"></p><button class="go" id="bAct" hidden></button></div>
+</section>
+
+<dialog id="dRules">
+  <h2 data-t="rulesTitle">Правила</h2>
+  <ul id="rulesList"></ul>
+  <button class="go" id="bRulesClose" data-t="ok">Понятно</button>
+</dialog>
+<dialog id="dEnd">
+  <h2 id="endTitle"></h2>
+  <p id="endText"></p>
+  <button class="go" id="bAgain" data-t="again">Сыграть ещё</button>
+</dialog>
+
+<script>
+/* ================= game logic (no DOM) ================= */
+const SUITS=['S','H','D','C'], SYM={S:'♠︎',H:'♥︎',D:'♦︎',C:'♣︎'};
+const RANKS=['2','3','4','5','6','7','8','9','10','Q','K','A'];
+const NEED=2, HAND=7;
+const rankOf=c=>c.slice(0,-1), suitOf=c=>c.slice(-1);
+const isRed=c=>suitOf(c)==='H'||suitOf(c)==='D';
+const isWild=c=>c==='JC'||c==='JD';      // two-eyed jacks: place anywhere
+const isRemove=c=>c==='JS'||c==='JH';    // one-eyed jacks: remove a chip
+const CORNER=[];for(let i=0;i<100;i++)CORNER[i]=(i===0||i===9||i===90||i===99);
+
+function spiral(){
+  const o=[];let t=0,b=9,l=0,r=9;
+  while(t<=b&&l<=r){
+    for(let c=l;c<=r;c++)o.push(t*10+c);t++;
+    for(let y=t;y<=b;y++)o.push(y*10+r);r--;
+    if(t<=b){for(let c=r;c>=l;c--)o.push(b*10+c);b--;}
+    if(l<=r){for(let y=b;y>=t;y--)o.push(y*10+l);l++;}
+  }
+  return o;
+}
+const BOARD=(()=>{
+  const seq=[];
+  for(const s of ['S','D','C','H'])for(const r of RANKS)seq.push(r+s);
+  for(const s of ['H','C','D','S'])for(const r of [...RANKS].reverse())seq.push(r+s);
+  const b=new Array(100).fill('*');let k=0;
+  for(const i of spiral())if(!CORNER[i])b[i]=seq[k++];
+  return b;
+})();
+const DIRS=[[0,1],[1,0],[1,1],[1,-1]];
+const WIN=[];
+for(let cell=0;cell<100;cell++){
+  const r=Math.floor(cell/10),c=cell%10,res=[];
+  for(const [dr,dc] of DIRS)for(let s=-4;s<=0;s++){
+    const w=[];let ok=true;
+    for(let k=0;k<5;k++){const y=r+(s+k)*dr,x=c+(s+k)*dc;if(y<0||y>9||x<0||x>9){ok=false;break;}w.push(y*10+x);}
+    if(ok)res.push(w);
+  }
+  WIN[cell]=res;
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+let S=null;
+function newState(){
+  const deck=[];
+  for(let n=0;n<2;n++)for(const s of SUITS)for(const r of [...RANKS,'J'])deck.push(r+s);
+  shuffle(deck);
+  const st={chips:new Array(100).fill(0),locked:new Array(100).fill(0),seqs:{1:[],2:[]},
+    deck,discard:[],hands:{1:[],2:[]},turn:1,exchanged:false,last:-1,gone:-1,winner:0,log:null};
+  for(let i=0;i<HAND;i++){st.hands[1].push(deck.pop());st.hands[2].push(deck.pop());}
+  jacksLeft(st.hands[1]);jacksLeft(st.hands[2]);
+  return st;
+}
+function draw(p){
+  if(!S.deck.length&&S.discard.length){S.deck=shuffle(S.discard);S.discard=[];}
+  if(S.deck.length)S.hands[p].push(S.deck.pop());
+  jacksLeft(S.hands[p]);
+}
+function jacksLeft(h){const j=h.filter(c=>rankOf(c)==='J'),r=h.filter(c=>rankOf(c)!=='J');h.length=0;h.push(...j,...r);}
+function targets(p,card){
+  const o=3-p,res=[];
+  for(let i=0;i<100;i++){
+    if(CORNER[i])continue;
+    if(isRemove(card)){if(S.chips[i]===o&&!S.locked[i])res.push(i);}
+    else if(S.chips[i]===0&&(isWild(card)||BOARD[i]===card))res.push(i);
+  }
+  return res;
+}
+const isDead=(p,card)=>!isWild(card)&&!isRemove(card)&&targets(p,card).length===0;
+function legalMoves(p){
+  const m=[];
+  S.hands[p].forEach((card,h)=>{for(const cell of targets(p,card))m.push({h,card,cell});});
+  return m;
+}
+function checkSequences(p,cell){
+  let found=true;
+  while(found){
+    found=false;
+    for(const w of WIN[cell]){
+      if(!w.every(i=>CORNER[i]||S.chips[i]===p))continue;
+      if(w.filter(i=>!CORNER[i]&&S.locked[i]).length>1)continue;
+      w.forEach(i=>{if(!CORNER[i])S.locked[i]=1;});
+      S.seqs[p].push(w);found=true;break;
+    }
+  }
+}
+function endTurn(p){
+  S.exchanged=false;
+  if(S.seqs[p].length>=NEED){S.winner=p;return;}
+  S.turn=3-p;
+}
+function play(p,h,cell){
+  const card=S.hands[p].splice(h,1)[0];
+  S.discard.push(card);
+  if(isRemove(card)){S.chips[cell]=0;S.gone=cell;S.last=-1;}
+  else{S.chips[cell]=p;S.last=cell;S.gone=-1;checkSequences(p,cell);}
+  S.log={p,card,kind:isRemove(card)?'remove':'place',cell};
+  draw(p);endTurn(p);
+}
+function exchange(p,h){
+  S.discard.push(S.hands[p].splice(h,1)[0]);
+  draw(p);S.exchanged=true;
+}
+function pass(p){S.log={p,kind:'pass'};S.last=-1;S.gone=-1;endTurn(p);}
+
+/* --- bot --- */
+const WT=[1,6,30,200,3000];
+let MIDNOISE=120;
+function threat(p,cell){
+  const o=3-p;let t=0,best=0;
+  for(const w of WIN[cell]){
+    let n=0,lk=0,ok=true;
+    for(const i of w){
+      if(i===cell)continue;
+      if(CORNER[i]){n++;continue;}
+      const ch=S.chips[i];
+      if(ch===o){ok=false;break;}
+      if(ch===p){n++;if(S.locked[i])lk++;}
+    }
+    if(!ok||lk>1)continue;
+    t+=WT[n];if(n>best)best=n;
+  }
+  return {t,best};
+}
+function handCells(p,skip){
+  const set=new Set();
+  S.hands[p].forEach((c,h)=>{if(h===skip||isWild(c)||isRemove(c))return;for(const i of targets(p,c))set.add(i);});
+  return set;
+}
+function threatSmart(p,cell,mine){
+  const o=3-p;let t=0;
+  for(const w of WIN[cell]){
+    let n=0,lk=0,m=0,ok=true;
+    for(const i of w){
+      if(i===cell)continue;
+      if(CORNER[i]){n++;continue;}
+      const ch=S.chips[i];
+      if(ch===o){ok=false;break;}
+      if(ch===p){n++;if(S.locked[i])lk++;}
+      else if(mine.has(i))m++;
+    }
+    if(!ok||lk>1)continue;
+    t+=WT[n]*(1+0.7*m);
+  }
+  return t;
+}
+/* level: 1 simple, 2 medium, 3 smart */
+function chooseMove(p,level){
+  level=level||2;
+  const o=3-p,moves=legalMoves(p);
+  if(!moves.length)return null;
+  if(level===1&&Math.random()<0.3)return moves[Math.floor(Math.random()*moves.length)];
+  let bestM=null,bestS=-Infinity;
+  const cache={};
+  for(const m of moves){
+    let sc;
+    if(level===1){
+      if(isRemove(m.card))sc=Math.random()*30;
+      else{
+        const a=threat(p,m.cell),d=threat(o,m.cell);
+        sc=a.t+Math.random()*40;
+        if(d.best===4&&Math.random()<0.5)sc+=3000;
+      }
+    }else if(isRemove(m.card)){
+      const d=threat(o,m.cell);
+      if(level===2){sc=d.t*0.5-60;}
+      else{sc=d.t*0.9-150;if(d.best>=3&&S.seqs[o].length===NEED-1)sc+=2500;}
+    }else{
+      const a=threat(p,m.cell),d=threat(o,m.cell);
+      if(level===2){sc=a.t+(d.best>=3?d.t*0.5:0)+Math.random()*MIDNOISE;}
+      else{
+        const mine=cache[m.h]||(cache[m.h]=handCells(p,m.h));
+        sc=threatSmart(p,m.cell,mine)+d.t*0.8;
+        if(isWild(m.card))sc-=150;
+      }
+      if(a.best===4)sc+=S.seqs[p].length===NEED-1?1e6:8000;
+      if(d.best===4)sc+=S.seqs[o].length===NEED-1?5e5:5000;
+    }
+    sc+=Math.random();
+    if(sc>bestS){bestS=sc;bestM=m;}
+  }
+  return bestM;
+}
+function botTurn(p,level){
+  if(!S.exchanged){const h=S.hands[p].findIndex(c=>isDead(p,c));if(h>=0)exchange(p,h);}
+  const m=chooseMove(p,level);
+  if(m)play(p,m.h,m.cell);else pass(p);
+}
+
+/* ================= interface ================= */
+if(typeof document!=='undefined'){
+const T={
+ ru:{title:'Пять в ряд',rules:'Правила',newGame:'Новая игра',sure:'Точно?',you:'Вы',bot:'Бот',hand:'Ваши карты',deck:'в колоде',ok:'Понятно',again:'Сыграть ещё',
+  levels:['Бот: простой','Бот: средний','Бот: умный'],rulesTitle:'Правила',cards:n=>n+' карт',
+  pick:'Ваш ход. Выберите карту.',place:'Поставьте фишку на подсвеченную клетку.',
+  wild:'Валет ♣ или ♦: фишка на любую свободную клетку.',remove:'Валет ♠ или ♥: снимите фишку бота.',
+  noRemove:'Снимать нечего: все фишки бота в готовых рядах или их нет.',
+  dead:'Обе клетки этой карты заняты.',deadUsed:'Обмен в этот ход уже был. Выберите другую карту.',
+  exchange:'Обменять карту',passBtn:'Пропустить ход',noMoves:'Ходов нет.',
+  thinking:'Бот думает…',botPlaced:c=>'Бот сыграл '+c+'. ',botRemoved:c=>'Бот снял вашу фишку ('+c+'). ',botPassed:'Бот пропустил ход. ',
+  win:'Вы победили',lose:'Победил бот',winText:'Два ряда по пять собраны.',loseText:'Бот собрал два ряда раньше.',
+  rulesList:['Поле 10×10: каждая карта, кроме валетов, встречается на нём дважды. Играют две колоды, у каждого 7 карт.',
+   'Ход: выберите карту, поставьте фишку на свободную клетку с этой картой, затем автоматически берётся новая карта.',
+   'Валеты ♣ и ♦ ставят фишку на любую свободную клетку.',
+   'Валеты ♠ и ♥ снимают фишку соперника, если она не в готовом ряду.',
+   'Угловые клетки общие: они засчитываются каждому игроку.',
+   'Ряд: пять фишек подряд по горизонтали, вертикали или диагонали. Второй ряд может использовать одну фишку первого.',
+   'Если обе клетки карты заняты, её можно обменять один раз за ход.',
+   'Побеждает тот, кто первым соберёт два ряда.']},
+ en:{title:'Five in a Row',rules:'Rules',newGame:'New game',sure:'Sure?',you:'You',bot:'Bot',hand:'Your cards',deck:'in deck',ok:'Got it',again:'Play again',
+  levels:['Bot: simple','Bot: medium','Bot: smart'],rulesTitle:'Rules',cards:n=>n+' cards',
+  pick:'Your turn. Pick a card.',place:'Put a chip on a highlighted cell.',
+  wild:'Jack of ♣ or ♦: a chip on any free cell.',remove:'Jack of ♠ or ♥: remove one of the bot’s chips.',
+  noRemove:'Nothing to remove: the bot has no chips outside finished rows.',
+  dead:'Both cells for this card are taken.',deadUsed:'You already exchanged this turn. Pick another card.',
+  exchange:'Exchange card',passBtn:'Pass',noMoves:'No moves available.',
+  thinking:'Bot is thinking…',botPlaced:c=>'Bot played '+c+'. ',botRemoved:c=>'Bot removed your chip ('+c+'). ',botPassed:'Bot passed. ',
+  win:'You win',lose:'Bot wins',winText:'You completed two rows of five.',loseText:'The bot completed two rows first.',
+  rulesList:['A 10×10 board: every card except jacks appears on it twice. Two decks are used, 7 cards each.',
+   'On your turn pick a card and put a chip on a free cell showing that card; a new card is drawn automatically.',
+   'Jacks of ♣ and ♦ place a chip on any free cell.',
+   'Jacks of ♠ and ♥ remove an opponent’s chip unless it is part of a finished row.',
+   'Corner cells are shared: they count for every player.',
+   'A row is five chips in a line, horizontal, vertical or diagonal. A second row may reuse one chip of the first.',
+   'If both cells of a card are taken, you may exchange it once per turn.',
+   'The first player to complete two rows wins.']}
+};
+const $=id=>document.getElementById(id);
+const KEY='five-in-row-v1';
+let lang='ru',level=2,sel=-1,botTimer=null,sureTimer=null;
+const store={get(k){try{return localStorage.getItem(k);}catch(e){return null;}},set(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
+const t=k=>T[lang][k];
+const label=c=>rankOf(c)+SYM[suitOf(c)];
+
+function save(){store.set(KEY,JSON.stringify(S));}
+function load(){
+  try{const s=JSON.parse(store.get(KEY));if(s&&s.chips&&s.chips.length===100&&s.hands&&s.deck)return s;}catch(e){}
+  return null;
+}
+
+function render(){
+  const my=S.turn===1&&!S.winner;
+  const card=sel>=0?S.hands[1][sel]:null;
+  const tg=card&&my?new Set(targets(1,card)):null;
+  let h='';
+  for(let i=0;i<100;i++){
+    if(CORNER[i]){h+='<button class="cell corner" disabled aria-hidden="true">★</button>';continue;}
+    const c=BOARD[i];let cls='cell';
+    if(isRed(c))cls+=' red';
+    if(tg){if(tg.has(i))cls+=' target'+(isRemove(card)?' rm':'');else cls+=' dim';}
+    if(S.gone===i)cls+=' gone';
+    let chip='';
+    if(S.chips[i])chip='<i class="chip '+(S.chips[i]===1?'you':'bot')+(S.locked[i]?' locked':'')+(S.last===i?' last':'')+'"></i>';
+    h+='<button class="'+cls+'" data-i="'+i+'" aria-label="'+label(c)+'"><span>'+rankOf(c)+'</span><span class="st">'+SYM[suitOf(c)]+'</span>'+chip+'</button>';
+  }
+  $('board').innerHTML=h;
+
+  h='';
+  S.hands[1].forEach((c,i)=>{
+    let cls='card';if(isRed(c))cls+=' red';if(i===sel)cls+=' sel';if(isDead(1,c))cls+=' dead';
+    const tag=isWild(c)?'<span class="tag">+</span>':isRemove(c)?'<span class="tag">✕</span>':'';
+    h+='<button class="'+cls+'" data-h="'+i+'"'+(my?'':' disabled')+'><span>'+rankOf(c)+'</span><span class="st">'+SYM[suitOf(c)]+'</span>'+tag+'</button>';
+  });
+  $('hand').innerHTML=h;
+
+  $('nYou').textContent=S.seqs[1].length+' / '+NEED;
+  $('nBot').textContent=S.seqs[2].length+' / '+NEED;
+  $('nDeck').textContent=S.deck.length;
+  $('nBotCards').textContent=t('cards')(S.hands[2].length);
+  $('sYou').classList.toggle('turn',S.turn===1&&!S.winner);
+  $('sBot').classList.toggle('turn',S.turn===2&&!S.winner);
+
+  let msg='',act=null;
+  if(S.winner){msg=S.winner===1?t('win'):t('lose');}
+  else if(!my){msg=t('thinking');}
+  else{
+    let pre='';
+    if(S.log&&S.log.p===2){
+      pre=S.log.kind==='pass'?t('botPassed'):S.log.kind==='remove'?t('botRemoved')(label(BOARD[S.log.cell])):t('botPlaced')(label(S.log.card));
+    }
+    const canEx=!S.exchanged&&S.hands[1].some(c=>isDead(1,c));
+    if(!legalMoves(1).length&&!canEx){msg=pre+t('noMoves');act=['passBtn',doPass];}
+    else if(!card){msg=pre+t('pick');}
+    else if(isDead(1,card)){
+      if(S.exchanged)msg=t('deadUsed');else{msg=t('dead');act=['exchange',doExchange];}
+    }
+    else if(isWild(card))msg=t('wild');
+    else if(isRemove(card))msg=tg.size?t('remove'):t('noRemove');
+    else msg=t('place');
+  }
+  $('msg').textContent=msg;
+  const b=$('bAct');
+  if(act){b.hidden=false;b.textContent=t(act[0]);b.onclick=act[1];}else{b.hidden=true;b.onclick=null;}
+}
+function applyLang(){
+  document.documentElement.lang=lang;
+  document.querySelectorAll('[data-t]').forEach(el=>{el.textContent=t(el.dataset.t);});
+  $('bLang').textContent=lang==='ru'?'EN':'RU';
+  $('rulesList').innerHTML=t('rulesList').map(x=>'<li>'+x+'</li>').join('');
+  [...$('level').options].forEach((o,i)=>{o.textContent=t('levels')[i];});
+  document.title=t('title');
+}
+function after(){
+  sel=-1;save();render();
+  if(S.winner){
+    $('endTitle').textContent=S.winner===1?t('win'):t('lose');
+    $('endText').textContent=S.winner===1?t('winText'):t('loseText');
+    setTimeout(()=>{if(S.winner&&!$('dEnd').open)$('dEnd').showModal();},600);
+  }else if(S.turn===2)scheduleBot();
+}
+function scheduleBot(){
+  clearTimeout(botTimer);
+  botTimer=setTimeout(()=>{if(S.turn===2&&!S.winner){botTurn(2,level);after();}},900);
+}
+function doExchange(){if(sel<0||S.exchanged||!isDead(1,S.hands[1][sel]))return;exchange(1,sel);sel=-1;save();render();}
+function doPass(){pass(1);after();}
+function start(){clearTimeout(botTimer);S=newState();sel=-1;save();render();}
+
+$('hand').addEventListener('click',e=>{
+  const b=e.target.closest('[data-h]');if(!b||S.turn!==1||S.winner)return;
+  const i=+b.dataset.h;sel=(sel===i?-1:i);render();
+});
+$('board').addEventListener('click',e=>{
+  const b=e.target.closest('[data-i]');if(!b||S.turn!==1||S.winner||sel<0)return;
+  const cell=+b.dataset.i,card=S.hands[1][sel];
+  if(!targets(1,card).includes(cell))return;
+  play(1,sel,cell);after();
+});
+$('bRules').onclick=()=>$('dRules').showModal();
+$('bRulesClose').onclick=()=>$('dRules').close();
+$('bAgain').onclick=()=>{$('dEnd').close();start();};
+$('bLang').onclick=()=>{lang=lang==='ru'?'en':'ru';store.set(KEY+'-lang',lang);applyLang();render();};
+$('bNew').onclick=()=>{
+  const b=$('bNew');
+  const fresh=S.winner||(S.discard.length===0);
+  if(fresh||b.classList.contains('warn')){clearTimeout(sureTimer);b.classList.remove('warn');b.textContent=t('newGame');start();return;}
+  b.classList.add('warn');b.textContent=t('sure');
+  sureTimer=setTimeout(()=>{b.classList.remove('warn');b.textContent=t('newGame');},3000);
+};
+
+try{const tg=window.Telegram&&window.Telegram.WebApp;if(tg&&tg.initData!==undefined){tg.ready();tg.expand();
+  if(tg.disableVerticalSwipes)tg.disableVerticalSwipes();
+  if(tg.setHeaderColor)tg.setHeaderColor('#1c2740');
+  if(tg.setBackgroundColor)tg.setBackgroundColor('#1c2740');
+  if(tg.setBottomBarColor)tg.setBottomBarColor('#111829');
+  const lc=tg.initDataUnsafe&&tg.initDataUnsafe.user&&tg.initDataUnsafe.user.language_code;
+  if(!store.get(KEY+'-lang')&&lc&&lc!=='ru')lang='en';
+}}catch(e){}
+$('level').onchange=()=>{level=+$('level').value;store.set(KEY+'-level',String(level));};
+const lv=+store.get(KEY+'-level');if(lv>=1&&lv<=3)level=lv;$('level').value=String(level);
+const sl=store.get(KEY+'-lang');if(sl==='en'||sl==='ru')lang=sl;
+S=load()||newState();jacksLeft(S.hands[1]);
+applyLang();render();
+if(S.winner)after();else if(S.turn===2)scheduleBot();
+}
+</script>
+</body>
+</html>
