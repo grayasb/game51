@@ -9,15 +9,17 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 :root{
-  /* layout: one screen, column: score bar / square board that takes all spare room / hand of 7 cards / action line */
+  /* layout: one screen, column: tools / score bar / square board that takes all spare room / tray with the hand of cards and the action line */
   --table:#1c2740;      /* ink-blue table */
-  --table-hi:#28365a;
-  --tray:#111829;       /* the player's own area under the board */   /* raised surfaces on the table */
+  --table-hi:#28365a;   /* raised surfaces on the table */
+  --tray:#111829;       /* the player's own area under the board */
   --paper:#f2eee2;      /* card faces and board cells */
   --ink:#1a2030;        /* black suits, text on paper */
-  --red:#c0352b;        /* red suits */
+  --red:#c0352b;        /* red suits, also the "remove" jack */
+  --add:#2a8f55;        /* the "place anywhere" jack */
   --you:#f0a21a;        /* player's chips, also the accent */
-  --bot:#19a08a;        /* bot's chips */
+  --bot:#19a08a;        /* first bot's chips */
+  --bot2:#a35ad6;       /* second bot's chips */
   --text:#e9edf6;
   --muted:#9aa6c2;
   --display:"Unbounded","Golos Text",system-ui,sans-serif;
@@ -31,29 +33,32 @@ body{
   display:flex;flex-direction:column;gap:10px;padding:10px 16px 12px;
   -webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;overflow:hidden;
 }
-button{font:inherit;color:inherit;cursor:pointer}
-button:focus-visible{outline:2px solid var(--you);outline-offset:2px}
+button,select{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,select:focus-visible{outline:2px solid var(--you);outline-offset:2px}
 
 header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 h1{font-family:var(--display);font-size:16px;font-weight:600;margin:0;letter-spacing:.02em;margin-right:auto}
 .tools{display:flex;gap:6px}
 .tool{background:var(--table-hi);border:0;border-radius:8px;padding:7px 10px;font-size:13px;font-weight:500}
 .tool.warn{background:var(--red)}
-select.tool{appearance:none;-webkit-appearance:none;color:var(--text);max-width:150px}
+select.tool{appearance:none;-webkit-appearance:none;color:var(--text);text-align:center;text-align-last:center}
 
-.score{display:flex;gap:8px;align-items:stretch}
-.side{flex:1;background:var(--table-hi);border-radius:10px;padding:7px 10px;display:flex;align-items:center;gap:8px;border:2px solid transparent;min-width:0}
+.score{display:flex;gap:6px;align-items:stretch}
+.side{flex:1;background:var(--table-hi);border-radius:10px;padding:7px 10px;display:flex;align-items:center;gap:7px;border:2px solid transparent;min-width:0}
 .side.turn{border-color:var(--text)}
 .dot{width:16px;height:16px;border-radius:50%;flex:none;box-shadow:inset 0 -2px 0 rgba(0,0,0,.25)}
-.dot.you{background:var(--you)} .dot.bot{background:var(--bot)}
-.side b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.side .n{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
-.side small{color:var(--muted);font-weight:400;white-space:nowrap;font-size:11px}
+.c1{background:var(--you)} .c2{background:var(--bot)} .c3{background:var(--bot2)}
 .who{display:flex;flex-direction:column;line-height:1.15;min-width:0}
-@media (max-width:520px){h1{display:none}.tools{flex:1}.tools .tool{flex:1;padding:7px 4px;text-align:center;font-size:12px;white-space:nowrap}}
+.side b{font-weight:700;white-space:nowrap}
+.side small{color:var(--muted);font-weight:400;white-space:nowrap;font-size:11px}
+.side .n{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
 .deck{flex:none;background:transparent;border:1px dashed var(--muted);border-radius:10px;padding:4px 10px;display:flex;flex-direction:column;justify-content:center;align-items:center;line-height:1.15}
 .deck span{font-weight:700;font-variant-numeric:tabular-nums}
 .deck small{color:var(--muted);font-size:11px}
+.score.three .side{padding:9px 8px;gap:6px;font-size:14px;justify-content:center}
+.score.three .side small,.score.three .side .n{display:none}
+.score.three .dot{width:13px;height:13px}
+.score.three .deck{padding:4px 7px}
 
 .wrap{flex:1;min-height:0;display:grid;place-items:center;container-type:size}
 .board{
@@ -76,9 +81,8 @@ select.tool{appearance:none;-webkit-appearance:none;color:var(--text);max-width:
   position:absolute;inset:11%;border-radius:50%;opacity:.94;
   box-shadow:inset 0 -.5cqw 0 rgba(0,0,0,.22),0 .3cqw .6cqw rgba(0,0,0,.35);
 }
-.chip.you{background:var(--you)} .chip.bot{background:var(--bot)}
 .chip.locked::after{content:"";position:absolute;inset:22%;border-radius:50%;border:.7cqw solid var(--ink)}
-.chip.last{outline:.6cqw solid var(--text);outline-offset:.3cqw}
+.chip.last{outline:3px solid var(--text);outline-offset:1px}
 @media (prefers-reduced-motion:no-preference){
   .chip.last{animation:pop .25s ease-out}
   @keyframes pop{from{transform:scale(1.5)}to{transform:scale(1)}}
@@ -92,11 +96,17 @@ select.tool{appearance:none;-webkit-appearance:none;color:var(--text);max-width:
 .card{
   flex:1;max-width:76px;aspect-ratio:5/7.6;border:0;border-radius:8px;background:var(--paper);color:var(--ink);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1;
-  font-weight:700;font-size:25px;position:relative;transition:transform .12s;
+  font-weight:700;font-size:25px;position:relative;transition:transform .12s;overflow:hidden;
 }
 .card.red{color:var(--red)}
 .card .st{font-size:28px}
-.card .tag{position:absolute;top:2px;right:4px;font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--ink);opacity:.7}
+.card .tag{position:absolute;left:0;right:0;bottom:0;height:17px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9.5px;font-weight:700;letter-spacing:.01em;white-space:nowrap}
+.card.jw,.card.jr{padding-bottom:15px;font-size:22px}
+.card.jw .st,.card.jr .st{font-size:22px}
+.card.jw{background:#dcf1e2;box-shadow:inset 0 0 0 2px var(--add)}
+.card.jw .tag{background:var(--add)}
+.card.jr{background:#f8ddd8;box-shadow:inset 0 0 0 2px var(--red)}
+.card.jr .tag{background:var(--red)}
 .card.sel{transform:translateY(-8px);box-shadow:0 0 0 3px var(--you)}
 .card.dead{opacity:.5}
 .card:disabled{cursor:default}
@@ -111,6 +121,13 @@ dialog h2{font-family:var(--display);font-size:17px;margin:0 0 12px;text-wrap:ba
 dialog ul{margin:0 0 16px;padding-left:18px;line-height:1.45}
 dialog li{margin-bottom:6px}
 dialog p{margin:0 0 16px;line-height:1.45}
+
+@media (max-width:520px){
+  h1{display:none}
+  .tools{flex:1;gap:5px}
+  .tools .tool{flex:1 1 auto;padding:7px 4px;text-align:center;font-size:12px;white-space:nowrap}
+  .action p{font-size:14px}
+}
 </style>
 </head>
 <body>
@@ -118,22 +135,19 @@ dialog p{margin:0 0 16px;line-height:1.45}
   <h1 data-t="title">Пять в ряд</h1>
   <div class="tools">
     <button class="tool" id="bRules" data-t="rules">Правила</button>
+    <select class="tool" id="players" aria-label="Число игроков"><option value="2"></option><option value="3"></option></select>
     <select class="tool" id="level" aria-label="Уровень бота"><option value="1"></option><option value="2"></option><option value="3"></option></select>
     <button class="tool" id="bLang">EN</button>
     <button class="tool" id="bNew" data-t="newGame">Новая игра</button>
   </div>
 </header>
 
-<div class="score">
-  <div class="side" id="sYou"><i class="dot you"></i><b data-t="you">Вы</b><span class="n" id="nYou">0 / 2</span></div>
-  <div class="deck"><span id="nDeck">90</span><small data-t="deck">в колоде</small></div>
-  <div class="side" id="sBot"><i class="dot bot"></i><span class="who"><b data-t="bot">Бот</b><small id="nBotCards"></small></span><span class="n" id="nBot">0 / 2</span></div>
-</div>
+<div class="score" id="score"></div>
 
 <div class="wrap"><div class="board" id="board"></div></div>
 
 <section class="tray">
-  <div class="trayhead"><i class="dot you"></i><span data-t="hand">Ваши карты</span></div>
+  <div class="trayhead"><i class="dot c1"></i><span data-t="hand">Ваши карты</span></div>
   <div class="hand" id="hand"></div>
   <div class="action"><p id="msg"></p><button class="go" id="bAct" hidden></button></div>
 </section>
@@ -153,7 +167,6 @@ dialog p{margin:0 0 16px;line-height:1.45}
 /* ================= game logic (no DOM) ================= */
 const SUITS=['S','H','D','C'], SYM={S:'♠︎',H:'♥︎',D:'♦︎',C:'♣︎'};
 const RANKS=['2','3','4','5','6','7','8','9','10','Q','K','A'];
-const NEED=2, HAND=7;
 const rankOf=c=>c.slice(0,-1), suitOf=c=>c.slice(-1);
 const isRed=c=>suitOf(c)==='H'||suitOf(c)==='D';
 const isWild=c=>c==='JC'||c==='JD';      // two-eyed jacks: place anywhere
@@ -191,15 +204,22 @@ for(let cell=0;cell<100;cell++){
 }
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 
+/* players are numbered 1..n; player 1 is the human. Two players: 7 cards, two rows to win. Three: 6 cards, one row. */
 let S=null;
-function newState(){
+const need=()=>S.n===3?1:2;
+const others=p=>{const o=[];for(let q=1;q<=S.n;q++)if(q!==p)o.push(q);return o;};
+function jacksLeft(h){const j=h.filter(c=>rankOf(c)==='J'),r=h.filter(c=>rankOf(c)!=='J');h.length=0;h.push(...j,...r);}
+function newState(n){
+  n=n===3?3:2;
   const deck=[];
-  for(let n=0;n<2;n++)for(const s of SUITS)for(const r of [...RANKS,'J'])deck.push(r+s);
+  for(let k=0;k<2;k++)for(const s of SUITS)for(const r of [...RANKS,'J'])deck.push(r+s);
   shuffle(deck);
-  const st={chips:new Array(100).fill(0),locked:new Array(100).fill(0),seqs:{1:[],2:[]},
-    deck,discard:[],hands:{1:[],2:[]},turn:1,exchanged:false,last:-1,gone:-1,winner:0,log:null};
-  for(let i=0;i<HAND;i++){st.hands[1].push(deck.pop());st.hands[2].push(deck.pop());}
-  jacksLeft(st.hands[1]);jacksLeft(st.hands[2]);
+  const st={n,chips:new Array(100).fill(0),locked:new Array(100).fill(0),seqs:{},
+    deck,discard:[],hands:{},turn:1,exchanged:false,marks:[],logs:[],winner:0};
+  const hs=n===3?6:7;
+  for(let p=1;p<=n;p++){st.seqs[p]=[];st.hands[p]=[];}
+  for(let i=0;i<hs;i++)for(let p=1;p<=n;p++)st.hands[p].push(deck.pop());
+  for(let p=1;p<=n;p++)jacksLeft(st.hands[p]);
   return st;
 }
 function draw(p){
@@ -207,13 +227,13 @@ function draw(p){
   if(S.deck.length)S.hands[p].push(S.deck.pop());
   jacksLeft(S.hands[p]);
 }
-function jacksLeft(h){const j=h.filter(c=>rankOf(c)==='J'),r=h.filter(c=>rankOf(c)!=='J');h.length=0;h.push(...j,...r);}
 function targets(p,card){
-  const o=3-p,res=[];
+  const res=[];
   for(let i=0;i<100;i++){
     if(CORNER[i])continue;
-    if(isRemove(card)){if(S.chips[i]===o&&!S.locked[i])res.push(i);}
-    else if(S.chips[i]===0&&(isWild(card)||BOARD[i]===card))res.push(i);
+    const ch=S.chips[i];
+    if(isRemove(card)){if(ch!==0&&ch!==p&&!S.locked[i])res.push(i);}
+    else if(ch===0&&(isWild(card)||BOARD[i]===card))res.push(i);
   }
   return res;
 }
@@ -237,36 +257,46 @@ function checkSequences(p,cell){
 }
 function endTurn(p){
   S.exchanged=false;
-  if(S.seqs[p].length>=NEED){S.winner=p;return;}
-  S.turn=3-p;
+  if(S.seqs[p].length>=need()){S.winner=p;return;}
+  S.turn=p%S.n+1;
+}
+function note(p,entry,mark){
+  if(p===1){S.marks=[];S.logs=[];}
+  if(mark)S.marks.push(mark);
+  S.logs.push(entry);
 }
 function play(p,h,cell){
   const card=S.hands[p].splice(h,1)[0];
   S.discard.push(card);
-  if(isRemove(card)){S.chips[cell]=0;S.gone=cell;S.last=-1;}
-  else{S.chips[cell]=p;S.last=cell;S.gone=-1;checkSequences(p,cell);}
-  S.log={p,card,kind:isRemove(card)?'remove':'place',cell};
+  if(isRemove(card)){
+    S.chips[cell]=0;
+    note(p,{p,card,kind:'remove',cell},{cell,kind:'gone'});
+  }else{
+    S.chips[cell]=p;
+    note(p,{p,card,kind:'place',cell},{cell,kind:'last'});
+    checkSequences(p,cell);
+  }
   draw(p);endTurn(p);
 }
 function exchange(p,h){
   S.discard.push(S.hands[p].splice(h,1)[0]);
   draw(p);S.exchanged=true;
 }
-function pass(p){S.log={p,kind:'pass'};S.last=-1;S.gone=-1;endTurn(p);}
+function pass(p){note(p,{p,kind:'pass'},null);endTurn(p);}
 
-/* --- bot --- */
+/* --- bots --- */
 const WT=[1,6,30,200,3000];
 let MIDNOISE=120;
 function threat(p,cell){
-  const o=3-p;let t=0,best=0;
+  let t=0,best=0;
   for(const w of WIN[cell]){
     let n=0,lk=0,ok=true;
     for(const i of w){
       if(i===cell)continue;
       if(CORNER[i]){n++;continue;}
       const ch=S.chips[i];
-      if(ch===o){ok=false;break;}
       if(ch===p){n++;if(S.locked[i])lk++;}
+      else if(ch!==0){ok=false;break;}
     }
     if(!ok||lk>1)continue;
     t+=WT[n];if(n>best)best=n;
@@ -279,15 +309,15 @@ function handCells(p,skip){
   return set;
 }
 function threatSmart(p,cell,mine){
-  const o=3-p;let t=0;
+  let t=0;
   for(const w of WIN[cell]){
     let n=0,lk=0,m=0,ok=true;
     for(const i of w){
       if(i===cell)continue;
       if(CORNER[i]){n++;continue;}
       const ch=S.chips[i];
-      if(ch===o){ok=false;break;}
       if(ch===p){n++;if(S.locked[i])lk++;}
+      else if(ch!==0){ok=false;break;}
       else if(mine.has(i))m++;
     }
     if(!ok||lk>1)continue;
@@ -298,34 +328,39 @@ function threatSmart(p,cell,mine){
 /* level: 1 simple, 2 medium, 3 smart */
 function chooseMove(p,level){
   level=level||2;
-  const o=3-p,moves=legalMoves(p);
+  const opp=others(p),moves=legalMoves(p),nd=need();
   if(!moves.length)return null;
   if(level===1&&Math.random()<0.3)return moves[Math.floor(Math.random()*moves.length)];
   let bestM=null,bestS=-Infinity;
   const cache={};
   for(const m of moves){
     let sc;
-    if(level===1){
-      if(isRemove(m.card))sc=Math.random()*30;
-      else{
-        const a=threat(p,m.cell),d=threat(o,m.cell);
-        sc=a.t+Math.random()*40;
-        if(d.best===4&&Math.random()<0.5)sc+=3000;
-      }
-    }else if(isRemove(m.card)){
-      const d=threat(o,m.cell);
-      if(level===2){sc=d.t*0.5-60;}
-      else{sc=d.t*0.9-150;if(d.best>=3&&S.seqs[o].length===NEED-1)sc+=2500;}
+    if(isRemove(m.card)){
+      const o=S.chips[m.cell],d=threat(o,m.cell);
+      if(level===1)sc=Math.random()*30;
+      else if(level===2)sc=d.t*0.5-60;
+      else{sc=d.t*0.9-150;if(d.best>=3&&S.seqs[o].length===nd-1)sc+=2500;}
     }else{
-      const a=threat(p,m.cell),d=threat(o,m.cell);
-      if(level===2){sc=a.t+(d.best>=3?d.t*0.5:0)+Math.random()*MIDNOISE;}
-      else{
-        const mine=cache[m.h]||(cache[m.h]=handCells(p,m.h));
-        sc=threatSmart(p,m.cell,mine)+d.t*0.8;
-        if(isWild(m.card))sc-=150;
+      const a=threat(p,m.cell);
+      let dT=0,dBest=0,block=0;
+      for(const o of opp){
+        const d=threat(o,m.cell);
+        dT+=d.t;if(d.best>dBest)dBest=d.best;
+        if(d.best===4)block=Math.max(block,S.seqs[o].length===nd-1?5e5:5000);
       }
-      if(a.best===4)sc+=S.seqs[p].length===NEED-1?1e6:8000;
-      if(d.best===4)sc+=S.seqs[o].length===NEED-1?5e5:5000;
+      if(level===1){
+        sc=a.t+Math.random()*40;
+        if(dBest===4&&Math.random()<0.5)sc+=3000;
+      }else{
+        if(level===2)sc=a.t+(dBest>=3?dT*0.5:0)+Math.random()*MIDNOISE;
+        else{
+          const mine=cache[m.h]||(cache[m.h]=handCells(p,m.h));
+          sc=threatSmart(p,m.cell,mine)+dT*0.8;
+          if(isWild(m.card))sc-=150;
+        }
+        if(a.best===4)sc+=S.seqs[p].length===nd-1?1e6:8000;
+        sc+=block;
+      }
     }
     sc+=Math.random();
     if(sc>bestS){bestS=sc;bestM=m;}
@@ -342,50 +377,56 @@ function botTurn(p,level){
 if(typeof document!=='undefined'){
 const T={
  ru:{title:'Пять в ряд',rules:'Правила',newGame:'Новая игра',sure:'Точно?',you:'Вы',bot:'Бот',hand:'Ваши карты',deck:'в колоде',ok:'Понятно',again:'Сыграть ещё',
-  levels:['Бот: простой','Бот: средний','Бот: умный'],rulesTitle:'Правила',cards:n=>n+' карт',
+  levels:['Простой','Средний','Умный'],pl:['1 бот','2 бота'],rulesTitle:'Правила',cards:n=>n+' карт',jAdd:'ставит',jRem:'снимает',
   pick:'Ваш ход. Выберите карту.',place:'Поставьте фишку на подсвеченную клетку.',
-  wild:'Валет ♣ или ♦: фишка на любую свободную клетку.',remove:'Валет ♠ или ♥: снимите фишку бота.',
-  noRemove:'Снимать нечего: все фишки бота в готовых рядах или их нет.',
+  wild:'Валет ♣ или ♦: фишка на любую свободную клетку.',remove:'Валет ♠ или ♥: снимите чужую фишку.',
+  noRemove:'Снимать нечего: чужих фишек вне готовых рядов нет.',
   dead:'Обе клетки этой карты заняты.',deadUsed:'Обмен в этот ход уже был. Выберите другую карту.',
   exchange:'Обменять карту',passBtn:'Пропустить ход',noMoves:'Ходов нет.',
-  thinking:'Бот думает…',botPlaced:c=>'Бот сыграл '+c+'. ',botRemoved:c=>'Бот снял вашу фишку ('+c+'). ',botPassed:'Бот пропустил ход. ',
-  win:'Вы победили',lose:'Победил бот',winText:'Два ряда по пять собраны.',loseText:'Бот собрал два ряда раньше.',
-  rulesList:['Поле 10×10: каждая карта, кроме валетов, встречается на нём дважды. Играют две колоды, у каждого 7 карт.',
+  thinking:n=>n+' думает…',lPlace:(n,c)=>n+': '+c+'. ',lRemove:(n,c)=>n+' снял фишку с '+c+'. ',lPass:n=>n+' пропустил ход. ',
+  win:'Вы победили',lose:n=>'Победил '+n,winText:k=>k===2?'Два ряда по пять собраны.':'Ряд из пяти собран.',loseText:k=>k===2?'Соперник собрал два ряда раньше.':'Соперник собрал ряд раньше.',
+  rulesList:['Поле 10×10: каждая карта, кроме валетов, встречается на нём дважды. Играют две колоды.',
    'Ход: выберите карту, поставьте фишку на свободную клетку с этой картой, затем автоматически берётся новая карта.',
-   'Валеты ♣ и ♦ ставят фишку на любую свободную клетку.',
-   'Валеты ♠ и ♥ снимают фишку соперника, если она не в готовом ряду.',
+   'Валеты ♣ и ♦ (зелёные, «ставит») ставят фишку на любую свободную клетку.',
+   'Валеты ♠ и ♥ (красные, «снимает») снимают чужую фишку, если она не в готовом ряду.',
    'Угловые клетки общие: они засчитываются каждому игроку.',
    'Ряд: пять фишек подряд по горизонтали, вертикали или диагонали. Второй ряд может использовать одну фишку первого.',
    'Если обе клетки карты заняты, её можно обменять один раз за ход.',
-   'Побеждает тот, кто первым соберёт два ряда.']},
+   'Вдвоём: по 7 карт, побеждает тот, кто первым соберёт два ряда.',
+   'Втроём: по 6 карт, каждый сам за себя, для победы хватает одного ряда.']},
  en:{title:'Five in a Row',rules:'Rules',newGame:'New game',sure:'Sure?',you:'You',bot:'Bot',hand:'Your cards',deck:'in deck',ok:'Got it',again:'Play again',
-  levels:['Bot: simple','Bot: medium','Bot: smart'],rulesTitle:'Rules',cards:n=>n+' cards',
+  levels:['Simple','Medium','Smart'],pl:['1 bot','2 bots'],rulesTitle:'Rules',cards:n=>n+' cards',jAdd:'place',jRem:'remove',
   pick:'Your turn. Pick a card.',place:'Put a chip on a highlighted cell.',
-  wild:'Jack of ♣ or ♦: a chip on any free cell.',remove:'Jack of ♠ or ♥: remove one of the bot’s chips.',
-  noRemove:'Nothing to remove: the bot has no chips outside finished rows.',
+  wild:'Jack of ♣ or ♦: a chip on any free cell.',remove:'Jack of ♠ or ♥: remove an opponent’s chip.',
+  noRemove:'Nothing to remove: no opponent chips outside finished rows.',
   dead:'Both cells for this card are taken.',deadUsed:'You already exchanged this turn. Pick another card.',
   exchange:'Exchange card',passBtn:'Pass',noMoves:'No moves available.',
-  thinking:'Bot is thinking…',botPlaced:c=>'Bot played '+c+'. ',botRemoved:c=>'Bot removed your chip ('+c+'). ',botPassed:'Bot passed. ',
-  win:'You win',lose:'Bot wins',winText:'You completed two rows of five.',loseText:'The bot completed two rows first.',
-  rulesList:['A 10×10 board: every card except jacks appears on it twice. Two decks are used, 7 cards each.',
+  thinking:n=>n+' is thinking…',lPlace:(n,c)=>n+': '+c+'. ',lRemove:(n,c)=>n+' removed the chip from '+c+'. ',lPass:n=>n+' passed. ',
+  win:'You win',lose:n=>n+' wins',winText:k=>k===2?'You completed two rows of five.':'You completed a row of five.',loseText:k=>k===2?'Your opponent completed two rows first.':'Your opponent completed a row first.',
+  rulesList:['A 10×10 board: every card except jacks appears on it twice. Two decks are used.',
    'On your turn pick a card and put a chip on a free cell showing that card; a new card is drawn automatically.',
-   'Jacks of ♣ and ♦ place a chip on any free cell.',
-   'Jacks of ♠ and ♥ remove an opponent’s chip unless it is part of a finished row.',
+   'Jacks of ♣ and ♦ (green, “place”) put a chip on any free cell.',
+   'Jacks of ♠ and ♥ (red, “remove”) remove an opponent’s chip unless it is part of a finished row.',
    'Corner cells are shared: they count for every player.',
    'A row is five chips in a line, horizontal, vertical or diagonal. A second row may reuse one chip of the first.',
    'If both cells of a card are taken, you may exchange it once per turn.',
-   'The first player to complete two rows wins.']}
+   'Two players: 7 cards each, the first to complete two rows wins.',
+   'Three players: 6 cards each, everyone for themselves, one row is enough to win.']}
 };
 const $=id=>document.getElementById(id);
-const KEY='five-in-row-v1';
-let lang='ru',level=2,sel=-1,botTimer=null,sureTimer=null;
+const KEY='five-in-row-v1',SKEY=KEY+'-s2';
+let lang='ru',level=2,players=2,sel=-1,botTimer=null,sureTimer=null;
 const store={get(k){try{return localStorage.getItem(k);}catch(e){return null;}},set(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
 const t=k=>T[lang][k];
 const label=c=>rankOf(c)+SYM[suitOf(c)];
+const pname=p=>p===1?t('you'):S.n===2?t('bot'):t('bot')+' '+(p-1);
 
-function save(){store.set(KEY,JSON.stringify(S));}
+function save(){store.set(SKEY,JSON.stringify(S));}
 function load(){
-  try{const s=JSON.parse(store.get(KEY));if(s&&s.chips&&s.chips.length===100&&s.hands&&s.deck)return s;}catch(e){}
+  try{
+    const s=JSON.parse(store.get(SKEY));
+    if(s&&(s.n===2||s.n===3)&&s.chips&&s.chips.length===100&&s.hands&&s.hands[s.n]&&s.deck&&s.marks&&s.logs)return s;
+  }catch(e){}
   return null;
 }
 
@@ -393,41 +434,48 @@ function render(){
   const my=S.turn===1&&!S.winner;
   const card=sel>=0?S.hands[1][sel]:null;
   const tg=card&&my?new Set(targets(1,card)):null;
+  const lastSet=new Set(),goneSet=new Set();
+  for(const m of S.marks)(m.kind==='gone'?goneSet:lastSet).add(m.cell);
   let h='';
   for(let i=0;i<100;i++){
     if(CORNER[i]){h+='<button class="cell corner" disabled aria-hidden="true">★</button>';continue;}
     const c=BOARD[i];let cls='cell';
     if(isRed(c))cls+=' red';
     if(tg){if(tg.has(i))cls+=' target'+(isRemove(card)?' rm':'');else cls+=' dim';}
-    if(S.gone===i)cls+=' gone';
+    if(goneSet.has(i)&&!S.chips[i])cls+=' gone';
     let chip='';
-    if(S.chips[i])chip='<i class="chip '+(S.chips[i]===1?'you':'bot')+(S.locked[i]?' locked':'')+(S.last===i?' last':'')+'"></i>';
+    if(S.chips[i])chip='<i class="chip c'+S.chips[i]+(S.locked[i]?' locked':'')+(lastSet.has(i)?' last':'')+'"></i>';
     h+='<button class="'+cls+'" data-i="'+i+'" aria-label="'+label(c)+'"><span>'+rankOf(c)+'</span><span class="st">'+SYM[suitOf(c)]+'</span>'+chip+'</button>';
   }
   $('board').innerHTML=h;
 
   h='';
   S.hands[1].forEach((c,i)=>{
-    let cls='card';if(isRed(c))cls+=' red';if(i===sel)cls+=' sel';if(isDead(1,c))cls+=' dead';
-    const tag=isWild(c)?'<span class="tag">+</span>':isRemove(c)?'<span class="tag">✕</span>':'';
+    let cls='card';if(isRed(c))cls+=' red';
+    if(isWild(c))cls+=' jw';else if(isRemove(c))cls+=' jr';
+    if(i===sel)cls+=' sel';if(isDead(1,c))cls+=' dead';
+    const tag=isWild(c)?'<span class="tag">'+t('jAdd')+'</span>':isRemove(c)?'<span class="tag">'+t('jRem')+'</span>':'';
     h+='<button class="'+cls+'" data-h="'+i+'"'+(my?'':' disabled')+'><span>'+rankOf(c)+'</span><span class="st">'+SYM[suitOf(c)]+'</span>'+tag+'</button>';
   });
   $('hand').innerHTML=h;
 
-  $('nYou').textContent=S.seqs[1].length+' / '+NEED;
-  $('nBot').textContent=S.seqs[2].length+' / '+NEED;
-  $('nDeck').textContent=S.deck.length;
-  $('nBotCards').textContent=t('cards')(S.hands[2].length);
-  $('sYou').classList.toggle('turn',S.turn===1&&!S.winner);
-  $('sBot').classList.toggle('turn',S.turn===2&&!S.winner);
+  h='';
+  for(let p=1;p<=S.n;p++){
+    h+='<div class="side'+(S.turn===p&&!S.winner?' turn':'')+'"><i class="dot c'+p+'"></i><span class="who"><b>'+pname(p)+'</b>'+
+      (p>1?'<small>'+t('cards')(S.hands[p].length)+'</small>':'')+'</span><span class="n">'+S.seqs[p].length+' / '+need()+'</span></div>';
+  }
+  h+='<div class="deck"><span>'+S.deck.length+'</span><small>'+t('deck')+'</small></div>';
+  $('score').innerHTML=h;
+  $('score').classList.toggle('three',S.n===3);
 
   let msg='',act=null;
-  if(S.winner){msg=S.winner===1?t('win'):t('lose');}
-  else if(!my){msg=t('thinking');}
+  if(S.winner){msg=S.winner===1?t('win'):t('lose')(pname(S.winner));}
+  else if(!my){msg=t('thinking')(pname(S.turn));}
   else{
     let pre='';
-    if(S.log&&S.log.p===2){
-      pre=S.log.kind==='pass'?t('botPassed'):S.log.kind==='remove'?t('botRemoved')(label(BOARD[S.log.cell])):t('botPlaced')(label(S.log.card));
+    for(const l of S.logs){
+      if(l.p===1)continue;
+      pre+=l.kind==='pass'?t('lPass')(pname(l.p)):l.kind==='remove'?t('lRemove')(pname(l.p),label(BOARD[l.cell])):t('lPlace')(pname(l.p),label(l.card));
     }
     const canEx=!S.exchanged&&S.hands[1].some(c=>isDead(1,c));
     if(!legalMoves(1).length&&!canEx){msg=pre+t('noMoves');act=['passBtn',doPass];}
@@ -449,23 +497,24 @@ function applyLang(){
   $('bLang').textContent=lang==='ru'?'EN':'RU';
   $('rulesList').innerHTML=t('rulesList').map(x=>'<li>'+x+'</li>').join('');
   [...$('level').options].forEach((o,i)=>{o.textContent=t('levels')[i];});
+  [...$('players').options].forEach((o,i)=>{o.textContent=t('pl')[i];});
   document.title=t('title');
 }
 function after(){
   sel=-1;save();render();
   if(S.winner){
-    $('endTitle').textContent=S.winner===1?t('win'):t('lose');
-    $('endText').textContent=S.winner===1?t('winText'):t('loseText');
+    $('endTitle').textContent=S.winner===1?t('win'):t('lose')(pname(S.winner));
+    $('endText').textContent=S.winner===1?t('winText')(need()):t('loseText')(need());
     setTimeout(()=>{if(S.winner&&!$('dEnd').open)$('dEnd').showModal();},600);
-  }else if(S.turn===2)scheduleBot();
+  }else if(S.turn!==1)scheduleBot();
 }
 function scheduleBot(){
   clearTimeout(botTimer);
-  botTimer=setTimeout(()=>{if(S.turn===2&&!S.winner){botTurn(2,level);after();}},900);
+  botTimer=setTimeout(()=>{if(S.turn!==1&&!S.winner){botTurn(S.turn,level);after();}},900);
 }
 function doExchange(){if(sel<0||S.exchanged||!isDead(1,S.hands[1][sel]))return;exchange(1,sel);sel=-1;save();render();}
 function doPass(){pass(1);after();}
-function start(){clearTimeout(botTimer);S=newState();sel=-1;save();render();}
+function start(){clearTimeout(botTimer);S=newState(players);sel=-1;save();render();}
 
 $('hand').addEventListener('click',e=>{
   const b=e.target.closest('[data-h]');if(!b||S.turn!==1||S.winner)return;
@@ -481,6 +530,8 @@ $('bRules').onclick=()=>$('dRules').showModal();
 $('bRulesClose').onclick=()=>$('dRules').close();
 $('bAgain').onclick=()=>{$('dEnd').close();start();};
 $('bLang').onclick=()=>{lang=lang==='ru'?'en':'ru';store.set(KEY+'-lang',lang);applyLang();render();};
+$('level').onchange=()=>{level=+$('level').value;store.set(KEY+'-level',String(level));};
+$('players').onchange=()=>{players=+$('players').value===3?3:2;store.set(KEY+'-players',String(players));start();};
 $('bNew').onclick=()=>{
   const b=$('bNew');
   const fresh=S.winner||(S.discard.length===0);
@@ -489,20 +540,23 @@ $('bNew').onclick=()=>{
   sureTimer=setTimeout(()=>{b.classList.remove('warn');b.textContent=t('newGame');},3000);
 };
 
+let tgLang=null;
 try{const tg=window.Telegram&&window.Telegram.WebApp;if(tg&&tg.initData!==undefined){tg.ready();tg.expand();
   if(tg.disableVerticalSwipes)tg.disableVerticalSwipes();
   if(tg.setHeaderColor)tg.setHeaderColor('#1c2740');
   if(tg.setBackgroundColor)tg.setBackgroundColor('#1c2740');
   if(tg.setBottomBarColor)tg.setBottomBarColor('#111829');
   const lc=tg.initDataUnsafe&&tg.initDataUnsafe.user&&tg.initDataUnsafe.user.language_code;
-  if(!store.get(KEY+'-lang')&&lc&&lc!=='ru')lang='en';
+  if(lc&&lc!=='ru')tgLang='en';
 }}catch(e){}
-$('level').onchange=()=>{level=+$('level').value;store.set(KEY+'-level',String(level));};
-const lv=+store.get(KEY+'-level');if(lv>=1&&lv<=3)level=lv;$('level').value=String(level);
+if(tgLang)lang=tgLang;
+const lv=+store.get(KEY+'-level');if(lv>=1&&lv<=3)level=lv;
 const sl=store.get(KEY+'-lang');if(sl==='en'||sl==='ru')lang=sl;
-S=load()||newState();jacksLeft(S.hands[1]);
+S=load();
+if(S)players=S.n;else{if(store.get(KEY+'-players')==='3')players=3;S=newState(players);}
+$('level').value=String(level);$('players').value=String(players);
 applyLang();render();
-if(S.winner)after();else if(S.turn===2)scheduleBot();
+if(S.winner)after();else if(S.turn!==1)scheduleBot();
 }
 </script>
 </body>
