@@ -65,10 +65,12 @@ header h1{font:700 19px var(--display);margin:0;letter-spacing:.02em}
 @media (max-width:480px){#bHint .hl{display:none}#bar{flex-wrap:nowrap;gap:6px;padding-left:10px;padding-right:10px}#bar .btn{padding:9px 8px;font-size:14px;flex:1 1 auto;min-width:0;white-space:nowrap}#bHint{flex:0 0 auto!important;margin-left:0;padding:9px 11px!important}}
 .card{width:var(--cw);height:calc(var(--cw)*1.42);background:var(--ivory);color:var(--ink);border:0;border-radius:calc(var(--cw)*.11);box-shadow:0 1px 3px rgba(0,0,0,.45),inset 0 0 0 1px rgba(0,0,0,.12);position:relative;display:inline-block;flex:none;padding:0;transition:transform .12s}
 .card.red{color:var(--red)}
-.card .rk{position:absolute;left:9%;top:6%;font:700 calc(var(--cw)*.36)/1 var(--body);letter-spacing:-.04em}
-.card .su{position:absolute;left:8%;top:40%;font-size:calc(var(--cw)*.42);line-height:1}
+/* крупные обозначения («джамбо»): номинал и масть занимают почти всю видимую часть карты */
+.card .rk{position:absolute;left:8%;top:3%;font:700 calc(var(--cw)*.47)/1 var(--body);letter-spacing:-.04em}
+.card .rk.ten{letter-spacing:-.07em;transform:scaleX(.76);transform-origin:left center}
+.card .su{position:absolute;left:7%;top:43%;font-size:calc(var(--cw)*.52);line-height:1}
 .card.joker{color:#6b3fa0}
-.card.joker .rk{font-size:calc(var(--cw)*.46)}
+.card.joker .rk{font-size:calc(var(--cw)*.52)}
 .card .jk{position:absolute;left:7%;right:0;bottom:8%;text-align:left;white-space:nowrap;font:700 calc(var(--cw)*.19)/1 var(--body)}
 .card.sm{--cw:clamp(32px,8.6vw,46px)}
 .meld .card+.card{margin-left:calc(var(--cw)*-.42)}
@@ -100,8 +102,7 @@ header h1{font:700 19px var(--display);margin:0;letter-spacing:.02em}
 #hand .card{margin-right:calc(var(--cw)*-.3);touch-action:none;user-select:none;-webkit-user-select:none}
 #hand .card.drag{transform:translateY(-14px) scale(1.07);box-shadow:0 0 0 3px var(--mist),0 10px 16px rgba(0,0,0,.55);z-index:2}
 #hand .card.sel{transform:translateY(-10px);box-shadow:0 0 0 3px var(--gold),0 6px 10px rgba(0,0,0,.5)}
-/* только что взятая карта: приподнята и с золотой полосой снизу — видно и под соседними картами */
-#hand .card.new:not(.sel):not(.drag){transform:translateY(-7px)}
+/* только что взятая карта: золотая полоса снизу, до конца хода стоит справа */
 #hand .card.new::after{content:"";position:absolute;left:0;right:0;bottom:0;height:calc(var(--cw)*.13);background:var(--gold);border-radius:0 0 calc(var(--cw)*.11) calc(var(--cw)*.11)}
 #bar{display:flex;gap:8px;padding:6px 16px 14px;flex-wrap:wrap;align-items:center}
 #bar .sp{flex:1}
@@ -150,8 +151,8 @@ header h1{font:700 19px var(--display);margin:0;letter-spacing:.02em}
   #table{display:block;overflow:visible;min-height:0;padding:0}
   .meld{display:inline-flex;vertical-align:top;margin:0 5px 5px 0;padding:3px 4px;border-radius:7px}
   .card.sm{--cw:36px}
-  .card.sm .rk{font-size:calc(var(--cw)*.44);top:5%}
-  .card.sm .su{font-size:calc(var(--cw)*.44);top:47%}
+  .card.sm .rk{font-size:calc(var(--cw)*.52);top:2%}
+  .card.sm .su{font-size:calc(var(--cw)*.56);top:44%}
   .card.sm .jk{font-size:9px;bottom:3%;left:5%}
   .meld .card+.card{margin-left:calc(var(--cw)*-.44)}
   .empty{font-size:13px;margin:6px 0;text-align:left}
@@ -170,8 +171,8 @@ header h1{font:700 19px var(--display);margin:0;letter-spacing:.02em}
   #hand.wrap{flex-wrap:wrap}
   #hand .card{margin-right:calc(var(--step,30px) - var(--cw))}
   #hand .card:last-child{margin-right:0}
-  #hand .card .rk{font-size:min(calc(var(--cw)*.36),calc(var(--step,30px)*.84))}
-  #hand .card .rk.ten{letter-spacing:-.12em}
+  #hand .card .rk{left:5%;font-size:min(calc(var(--cw)*.5),calc(var(--step,30px)*1.2))}
+  #hand .card .su{left:4%;top:44%;font-size:min(calc(var(--cw)*.55),calc(var(--step,30px)*1.25))}
   header{flex-wrap:nowrap}
   #deal{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #bar{flex-wrap:nowrap;gap:6px;padding:4px 12px 10px}

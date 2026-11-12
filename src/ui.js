@@ -41,12 +41,17 @@
   }
   function afterDeal() { sel.clear(); modal = null; say(''); sortHand(sortMode || 'suit'); save(); render(); tick(); }
   // выбранная раскладка держится сама: новая карта встаёт на своё место; перетаскивание её отключает
-  function sortHand(mode) {
+  let sortedDrew = null;
+  function sortHand(mode, all) {
     sortMode = mode;
     const h = st.players[ME].hand.slice();
     const key = c => E.isJ(c) ? 9999 : (mode === 'suit' ? c.s * 20 + c.r : c.r * 10 + c.s);
     h.sort((a, b) => key(a) - key(b));
     order = h.map(c => c.id);
+    // только что взятая карта до конца хода стоит справа, пока игрок сам не нажмёт раскладку
+    const t = st.turn, d = t && st.phase === 'play' && t.p === ME ? t.drew : null;
+    if (!all && d != null && d !== sortedDrew && order.includes(d)) { order = order.filter(x => x !== d); order.push(d); }
+    if (all) sortedDrew = d;
   }
   function myHand() {
     if (sortMode && !(drag && drag.on)) sortHand(sortMode);
@@ -324,8 +329,8 @@
     else if (a === 'bMeld') doMeld();
     else if (a === 'bDisc') doDiscard();
     else if (a === 'bUndo') { const r = E.undoStep(st); if (act(r, tr(r.untook ? 'm_untook' : 'm_undone'))) { sel.clear(); hintMeld = null; } done(); }
-    else if (a === 'sortS') { sortHand('suit'); save(); render(); }
-    else if (a === 'sortR') { sortHand('rank'); save(); render(); }
+    else if (a === 'sortS') { sortHand('suit', true); save(); render(); }
+    else if (a === 'sortR') { sortHand('rank', true); save(); render(); }
     else if (a === 'opt') modal.options[+el.dataset.i].fn();
     else if (a === 'toggleScore') { scoreOpen = !scoreOpen; store.set(KEY + '-score', scoreOpen ? '1' : '0'); render(); }
     else if (a === 'lang') { I.setLang(I.getLang() === 'ru' ? 'en' : 'ru'); store.set(KEY + '-lang', I.getLang()); say(''); render(); }
