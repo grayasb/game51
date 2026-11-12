@@ -84,7 +84,7 @@ select.tool{appearance:none;-webkit-appearance:none;color:var(--text);text-align
 .chip.locked::after{content:"";position:absolute;inset:22%;border-radius:50%;border:.7cqw solid var(--ink)}
 .chip.last{outline:3px solid var(--text);outline-offset:1px}
 @media (prefers-reduced-motion:no-preference){
-  .chip.last{animation:pop .25s ease-out}
+  .chip.pop{animation:pop .25s ease-out}
   @keyframes pop{from{transform:scale(1.5)}to{transform:scale(1)}}
 }
 
@@ -415,7 +415,7 @@ const T={
 };
 const $=id=>document.getElementById(id);
 const KEY='five-in-row-v1',SKEY=KEY+'-s2';
-let lang='ru',level=2,players=2,sel=-1,botTimer=null,sureTimer=null;
+let lang='ru',level=2,players=2,sel=-1,botTimer=null,sureTimer=null,popped=new Set();
 const store={get(k){try{return localStorage.getItem(k);}catch(e){return null;}},set(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
 const t=k=>T[lang][k];
 const label=c=>rankOf(c)+SYM[suitOf(c)];
@@ -444,10 +444,11 @@ function render(){
     if(tg){if(tg.has(i))cls+=' target'+(isRemove(card)?' rm':'');else cls+=' dim';}
     if(goneSet.has(i)&&!S.chips[i])cls+=' gone';
     let chip='';
-    if(S.chips[i])chip='<i class="chip c'+S.chips[i]+(S.locked[i]?' locked':'')+(lastSet.has(i)?' last':'')+'"></i>';
+    if(S.chips[i])chip='<i class="chip c'+S.chips[i]+(S.locked[i]?' locked':'')+(lastSet.has(i)?' last'+(popped.has(i)?'':' pop'):'')+'"></i>';
     h+='<button class="'+cls+'" data-i="'+i+'" aria-label="'+label(c)+'"><span>'+rankOf(c)+'</span><span class="st">'+SYM[suitOf(c)]+'</span>'+chip+'</button>';
   }
   $('board').innerHTML=h;
+  popped=lastSet;
 
   h='';
   S.hands[1].forEach((c,i)=>{
