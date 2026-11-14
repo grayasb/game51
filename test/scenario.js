@@ -52,3 +52,24 @@ console.log('открыт:',st.players[0].opened,'осталось карт:',st
   r = E.undoStep(st2); assert(r.ok && r.untook && st2.turn.phase === 'draw' && st2.discard[st2.discard.length - 1].id === k.id && st2.players[0].hand.length === 3, 'карта вернулась в сброс');
   console.log('отмена по шагам: ок');
 }
+
+// --- карта из сброса: до открытия обязательна к выкладке, после открытия — свободно в руку ---
+{
+  let id = 1; const c = (r, s) => ({ id: id++, r, s });
+  const mk = opened => {
+    const st = E.newGame([{ name: 'Вы' }, { name: 'b', bot: true }], () => 0.5); E.startDeal(st, Math.random);
+    const top = c(10, 1), h = [c(3, 0), c(13, 2), c(7, 3)];
+    st.players[0].hand = h.slice(); st.players[0].opened = opened; st.turn.p = 0; st.turn.wasOpened = opened; st.discard.push(top);
+    return { st, top, h };
+  };
+  let g = mk(true);
+  assert(E.draw(g.st, 'discard').ok);
+  assert(!E.discard(g.st, g.top.id).ok, 'ту же карту сбросить нельзя');
+  assert(E.discard(g.st, g.h[1].id).ok, 'открывшийся берёт из сброса в руку и сбрасывает другую');
+  assert(g.st.players[0].hand.some(x => x.id === g.top.id) && g.st.discard[g.st.discard.length - 1].id === g.h[1].id && g.st.turn.p === 1);
+  g = mk(false);
+  assert(E.draw(g.st, 'discard').ok);
+  assert(!E.discard(g.st, g.h[1].id).ok, 'до открытия взятую карту нужно выложить');
+  assert(E.undoStep(g.st).untook && g.st.turn.phase === 'draw');
+  console.log('карта из сброса: ок');
+}

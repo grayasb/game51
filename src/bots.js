@@ -154,12 +154,44 @@
     const pl = st.players[p], top = st.discard[st.discard.length - 1];
     if (!top) return false;
     const plan = evalPlan(st, pl.hand.concat([top]), pl.opened, top.id);
-    return !plan.passive && plan.usesMust;
+    if (!plan.passive && plan.usesMust) return 'use';
+    return keepWorth(st, p) ? 'keep' : false;
+  }
+  // сколько у карты «соседей» в руке: пара по достоинству или близкая карта той же масти
+  function synergy(c, hand) {
+    let s = 0;
+    for (const d of hand) {
+      if (d === c || d.id === c.id || isJ(d)) continue;
+      if (d.r === c.r && d.s !== c.s) s += 2;
+      else if (d.s === c.s) {
+        const dist = Math.min(Math.abs(d.r - c.r), c.r === 1 ? Math.abs(d.r - 14) : 99, d.r === 1 ? Math.abs(14 - c.r) : 99);
+        if (dist === 1) s += 2; else if (dist === 2) s += 1;
+      }
+    }
+    return s;
+  }
+  // Открывшийся игрок может взять карту из сброса в руку. Стоит ли: карта собирает будущую комбинацию,
+  // а в руке есть лишняя; либо (кто-то скоро закончит) она заметно дешевле лишней карты.
+  // Бот берёт карту «в руку» не больше KEEP_MAX раз за раздачу, чтобы боты не перекладывали сброс по кругу.
+  const KEEP_MAX = 3;
+  function keepCount(st, p) { const k = st.keeps; return k && k.deal === st.deal ? (k.n[p] || 0) : 0; }
+  function keepBump(st, p) { if (!st.keeps || st.keeps.deal !== st.deal) st.keeps = { deal: st.deal, n: {} }; st.keeps.n[p] = (st.keeps.n[p] || 0) + 1; }
+  function keepWorth(st, p) {
+    const pl = st.players[p], top = st.discard[st.discard.length - 1], lv = lvl(st);
+    if (!top || !pl.opened || lv === 'easy') return false;
+    if (pl.bot && keepCount(st, p) >= KEEP_MAX) return false;
+    if (isJ(top)) return true;
+    const spare = pl.hand.filter(c => !isJ(c) && synergy(c, pl.hand) === 0 && !canLayoff(st, c, ['add']));
+    if (!spare.length) return false;
+    if (synergy(top, pl.hand) >= 2) return true;
+    const danger = st.players.some((q, i) => i !== p && q.opened && q.hand.length <= 4);
+    return lv === 'hard' && danger && spare.some(c => rankVal(c.r) >= rankVal(top.r) + 4);
   }
   function chooseDiscard(st, p) {
     const pl = st.players[p], lv = lvl(st), n = st.players.length;
-    let cands = pl.hand.filter(c => !isJ(c));
-    if (!cands.length) cands = pl.hand;
+    const took = st.turn && st.turn.p === p ? st.turn.took : null;      // взятую из сброса карту сбросить нельзя
+    let cands = pl.hand.filter(c => !isJ(c) && c.id !== took);
+    if (!cands.length) cands = pl.hand.filter(c => c.id !== took);
     if (lv === 'easy' && Math.random() < 0.25) return cands[Math.floor(Math.random() * cands.length)];
     const nx = (p + 1) % n, next = st.players[nx], nextTakes = takesOf(st, nx);
     const danger = st.players.some((q, i) => i !== p && q.opened && q.hand.length <= 5);
@@ -193,8 +225,10 @@
   function step(st) {
     const t = st.turn, p = t.p, pl = st.players[p];
     if (t.phase === 'draw') {
-      if (!t.giveUp && !(lvl(st) === 'easy' && Math.random() < 0.5) && wantDiscard(st, p)) {
+      const want = !t.giveUp && !(lvl(st) === 'easy' && Math.random() < 0.5) && wantDiscard(st, p);
+      if (want) {
         const top = st.discard[st.discard.length - 1];
+        if (want === 'keep') keepBump(st, p);
         E.draw(st, 'discard'); noteTake(st, p, top); return { k: 'l_disc', a: label(top) };
       }
       E.draw(st, 'stock'); return { k: 'l_stock' };
@@ -244,11 +278,12 @@
       }
     }
     const d = chooseDiscard(st, p);
+    if (!d) return fail();              // в руке осталась только карта из сброса — её сбросить нельзя, переигрываем ход
     const r = E.discard(st, d.id);
     if (!r.ok) { if (t.giveUp) throw new Error('bot stuck: ' + r.err); return fail(); }
     return { k: r.end ? 'l_dropEnd' : 'l_drop', a: label(d) };
   }
 
-  const api = { step, bestMelds, evalPlan, label, noteTake };
+  const api = { step, bestMelds, evalPlan, label, noteTake, keepWorth };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.B51 = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -268,7 +268,7 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
   <ul>
     <li>108 карт: две колоды и 4 джокера. Каждому по 14 карт, одна карта открывается в сброс.</li>
     <li>Ход: взять карту, по желанию выложить, одну карту сбросить. Ходы идут по часовой стрелке.</li>
-    <li>Из сброса можно взять верхнюю карту, только если она в этот же ход ложится на стол.</li>
+    <li>До открытия верхнюю карту сброса можно взять, только если она в этот же ход ложится на стол. После открытия её можно брать свободно, в руку; сбросить эту же карту в тот же ход нельзя.</li>
     <li>Когда колода кончается, сброс переворачивается без перемешивания.</li>
     <li>Если у кого-то после раздачи три пары одинаковых карт (та же масть и достоинство, джокеры не считаются) — сразу пересдача, сдаёт следующий. Пересдача не считается раздачей.</li>
   </ul>
@@ -307,7 +307,7 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
   <ul>
     <li>108 cards: two decks plus 4 jokers. Each player gets 14 cards, and one card is turned up to start the discard pile.</li>
     <li>A turn: draw a card, lay down cards if you wish, discard one card. Play goes clockwise.</li>
-    <li>You may take the top discard only if you lay it on the table in the same turn.</li>
+    <li>Before opening, you may take the top discard only if you lay it on the table in the same turn. After opening you may take it freely into your hand; you cannot discard that same card in the same turn.</li>
     <li>When the deck runs out, the discard pile is turned over without shuffling.</li>
     <li>If anyone is dealt three pairs of identical cards (same suit and rank; jokers don't count), the cards are redealt at once and the next player deals. A redeal does not count as a deal.</li>
   </ul>
@@ -377,7 +377,7 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
       e_nodraw: 'Сейчас нельзя брать карту', e_discEmpty: 'Сброс пуст', e_noundo: 'Нечего отменять', e_drawFirst: 'Сначала возьмите карту',
       e_noCards: 'Нет таких карт в руке', e_notMeld: 'Это не комбинация: нужна группа (3–4 одного достоинства разных мастей) или ряд от 3 карт одной масти, джокер не больше одного',
       e_keepOne: 'Одну карту нужно оставить для сброса', e_noSuch: 'Нет такой карты или комбинации', e_noFit: 'Эта карта сюда не подходит',
-      e_mustLay: 'Карту, взятую из сброса, нужно выложить на стол в этот же ход', e_needOwn: 'Для открытия нужна хотя бы одна своя комбинация',
+      e_mustLay: 'До открытия карту из сброса нужно выложить на стол в этот же ход', e_sameCard: 'Карту, только что взятую из сброса, сбросить нельзя — выберите другую', e_needOwn: 'Для открытия нужна хотя бы одна своя комбинация',
       e_need51: 'Для открытия нужно выложить не меньше 51, сейчас {0}',
       l_flip: 'Колода закончилась — сброс перевёрнут', l_redeal: 'три пары одинаковых карт — пересдача, сдаёт следующий', l_sweepSet: 'Полная группа {0} ушла в сброс', l_sweepRun: 'Полный ряд {0} ушёл в сброс',
       l_stock: 'карта из колоды', l_disc: 'из сброса {0}', l_meld: 'выложено {0}', l_swap: 'джокер заменён на {0}', l_add: 'доложено {0}',
@@ -386,6 +386,7 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
       layHere: 'Доложить сюда выбранные карты', emptyTable: 'На столе пока пусто. Первая выкладка — комбинациями на 51 очко и больше.',
       stock: 'Колода', discardPile: 'Сброс', s_over: 'Раздача окончена', s_turnOf: 'Ходит {0}…',
       s_draw: 'Ваш ход. Возьмите карту из колоды или из сброса. Из сброса — только если сразу выложите её на стол.',
+      s_drawOpen: 'Ваш ход. Возьмите карту из колоды или из сброса.',
       s_play: 'Выберите карты и выложите комбинацию, доложите к комбинации на столе (нажмите на неё) или сбросьте одну карту. Карты в руке можно перетаскивать.',
       laid: 'выложено {0} из 51', joker: 'джокер', cancel: 'Отмена', close: 'Закрыть',
       r_noWinner: 'карты закончились, победителя нет', r_won: '{0} заканчивает раздачу', r_title: 'Раздача {0}: {1}',
@@ -399,11 +400,11 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
       m_drawFirst: 'Сначала возьмите карту: нажмите на колоду или на сброс.',
       m_pickFirst: 'Сначала выберите в руке карту, которую хотите доложить.', m_gotJoker: 'Джокер у вас в руке.',
       m_notAll: 'Подошли не все выбранные карты.', m_none: 'Эти карты сюда не подходят.',
-      m_took: 'Взятую карту нужно выложить в этот ход. Передумали — нажмите «Шаг назад».', m_undone: 'Шаг отменён.', m_untook: 'Карта возвращена в сброс. Возьмите карту заново.',
+      m_took: 'Взятую карту нужно выложить в этот ход. Передумали — нажмите «Шаг назад».', m_tookOpen: 'Карта из сброса у вас в руке. Сбросить её в этот же ход нельзя.', m_undone: 'Шаг отменён.', m_untook: 'Карта возвращена в сброс. Возьмите карту заново.',
       p_title: 'Счёт', p_hide: 'Скрыть счёт', p_note: 'Меньше — лучше. Золотом отмечен лидер, зелёным — кто закончил раздачу.',
       h_score: 'Счёт', h_rules: 'Правила', h_new: 'Новая', b_meld: 'Выложить', b_disc: 'Сбросить', b_undo: 'Шаг назад', b_sortS: 'По мастям', b_sortR: 'По рангу',
       b_hint: 'Подсказка', h_notTurn: 'Подсказка работает в ваш ход.',
-      h_drawDisc: 'Возьмите {0} из сброса — её можно сразу выложить.', h_drawStock: 'Берите из колоды: карта из сброса сейчас не пригодится.',
+      h_drawDisc: 'Возьмите {0} из сброса — её можно сразу выложить.', h_drawKeep: 'Возьмите {0} из сброса в руку: с ней собирается комбинация, а лишнюю карту сбросьте.', h_drawStock: 'Берите из колоды: карта из сброса сейчас не пригодится.',
       h_open: 'Хватает на открытие — {0} из 51 ({1}). Первая комбинация отмечена — нажмите «Выложить».',
       h_openMore: 'Выложено {2}, вместе с остальным будет {0} из 51 — хватает. Отмечена следующая комбинация: {1}.',
       h_short: 'Можно набрать {0} из 51 — не хватает {1} ({3}). Пока копите карты и сбросьте лишнюю.',
@@ -420,7 +421,7 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
       e_nodraw: "You can't draw a card now", e_discEmpty: 'The discard pile is empty', e_noundo: 'Nothing to undo', e_drawFirst: 'Draw a card first',
       e_noCards: 'Those cards are not in your hand', e_notMeld: 'Not a combination: you need a set (3–4 cards of one rank in different suits) or a run of 3 or more cards in one suit, with at most one joker',
       e_keepOne: 'You must keep one card to discard', e_noSuch: 'No such card or combination', e_noFit: "This card doesn't fit here",
-      e_mustLay: 'The card taken from the discard pile must be laid on the table in the same turn', e_needOwn: 'To open you need at least one combination of your own',
+      e_mustLay: 'Before opening, a card taken from the discard pile must be laid on the table in the same turn', e_sameCard: "You can't discard the card you just took from the discard pile — pick another", e_needOwn: 'To open you need at least one combination of your own',
       e_need51: 'To open you must lay down at least 51 points; you have {0}',
       l_flip: 'The deck ran out — the discard pile was turned over', l_redeal: 'three pairs of identical cards — redeal, the next player deals', l_sweepSet: 'Complete set of {0} went to the discard pile', l_sweepRun: 'Complete run {0} went to the discard pile',
       l_stock: 'drew from the deck', l_disc: 'took {0} from the discard pile', l_meld: 'laid down {0}', l_swap: 'replaced the joker with {0}', l_add: 'added {0}',
@@ -429,6 +430,7 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
       layHere: 'Add the selected cards here', emptyTable: 'The table is empty. The first lay-down must total 51 points or more.',
       stock: 'Deck', discardPile: 'Discard', s_over: 'Deal over', s_turnOf: "{0}'s turn…",
       s_draw: 'Your turn. Draw from the deck or the discard pile. Take from the discard pile only if you lay that card on the table right away.',
+      s_drawOpen: 'Your turn. Draw from the deck or the discard pile.',
       s_play: 'Select cards and lay down a combination, add to a combination on the table (click it), or discard one card. You can drag the cards in your hand.',
       laid: 'laid {0} of 51', joker: 'joker', cancel: 'Cancel', close: 'Close',
       r_noWinner: 'the cards ran out, no winner', r_won: '{0} went out', r_title: 'Deal {0}: {1}',
@@ -442,11 +444,11 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
       m_drawFirst: 'Draw a card first: tap the deck or the discard pile.',
       m_pickFirst: 'First select the card in your hand that you want to add.', m_gotJoker: 'The joker is now in your hand.',
       m_notAll: 'Not all selected cards fit.', m_none: "These cards don't fit here.",
-      m_took: 'You must lay the taken card this turn. Changed your mind? Press “Undo”.', m_undone: 'Step undone.', m_untook: 'The card went back to the discard pile. Draw again.',
+      m_took: 'You must lay the taken card this turn. Changed your mind? Press “Undo”.', m_tookOpen: "The discard is in your hand. You can't discard it this turn.", m_undone: 'Step undone.', m_untook: 'The card went back to the discard pile. Draw again.',
       p_title: 'Score', p_hide: 'Hide scores', p_note: 'Lower is better. Gold marks the leader, green marks who went out.',
       h_score: 'Score', h_rules: 'Rules', h_new: 'New', b_meld: 'Lay down', b_disc: 'Discard', b_undo: 'Undo', b_sortS: 'By suit', b_sortR: 'By rank',
       b_hint: 'Hint', h_notTurn: 'Hints work on your turn.',
-      h_drawDisc: 'Take {0} from the discard pile — you can lay it down right away.', h_drawStock: "Draw from the deck: the discard won't help you now.",
+      h_drawDisc: 'Take {0} from the discard pile — you can lay it down right away.', h_drawKeep: 'Take {0} from the discard pile into your hand: it builds a combination; discard a spare card.', h_drawStock: "Draw from the deck: the discard won't help you now.",
       h_open: 'Enough to open — {0} of 51 ({1}). The first combination is selected — press “Lay down”.',
       h_openMore: 'Laid {2}; with the rest it will be {0} of 51 — enough. Next combination selected: {1}.',
       h_short: 'You can make {0} of 51 — {1} short ({3}). Keep collecting and discard a spare card.',
@@ -734,8 +736,10 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
     if (st.phase !== 'play' || t.phase !== 'play') return err(tr('e_drawFirst'));
     const card = pl.hand.find(c => c.id === cardId);
     if (!card) return err(tr('e_noCards'));
-    if (t.took != null && pl.hand.some(c => c.id === t.took))
-      return err(tr('e_mustLay'));
+    // карта из сброса: до открытия её нужно выложить в этот же ход; открывшийся игрок может оставить её в руке,
+    // но сбросить обратно в тот же ход нельзя
+    if (t.took != null && !t.wasOpened && pl.hand.some(c => c.id === t.took)) return err(tr('e_mustLay'));
+    if (t.took != null && cardId === t.took) return err(tr('e_sameCard'));
     const laying = needsOpen(t);
     if (!t.wasOpened && laying) {
       if (t.ownMelds < 1) return err(tr('e_needOwn'));
@@ -928,12 +932,44 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
     const pl = st.players[p], top = st.discard[st.discard.length - 1];
     if (!top) return false;
     const plan = evalPlan(st, pl.hand.concat([top]), pl.opened, top.id);
-    return !plan.passive && plan.usesMust;
+    if (!plan.passive && plan.usesMust) return 'use';
+    return keepWorth(st, p) ? 'keep' : false;
+  }
+  // сколько у карты «соседей» в руке: пара по достоинству или близкая карта той же масти
+  function synergy(c, hand) {
+    let s = 0;
+    for (const d of hand) {
+      if (d === c || d.id === c.id || isJ(d)) continue;
+      if (d.r === c.r && d.s !== c.s) s += 2;
+      else if (d.s === c.s) {
+        const dist = Math.min(Math.abs(d.r - c.r), c.r === 1 ? Math.abs(d.r - 14) : 99, d.r === 1 ? Math.abs(14 - c.r) : 99);
+        if (dist === 1) s += 2; else if (dist === 2) s += 1;
+      }
+    }
+    return s;
+  }
+  // Открывшийся игрок может взять карту из сброса в руку. Стоит ли: карта собирает будущую комбинацию,
+  // а в руке есть лишняя; либо (кто-то скоро закончит) она заметно дешевле лишней карты.
+  // Бот берёт карту «в руку» не больше KEEP_MAX раз за раздачу, чтобы боты не перекладывали сброс по кругу.
+  const KEEP_MAX = 3;
+  function keepCount(st, p) { const k = st.keeps; return k && k.deal === st.deal ? (k.n[p] || 0) : 0; }
+  function keepBump(st, p) { if (!st.keeps || st.keeps.deal !== st.deal) st.keeps = { deal: st.deal, n: {} }; st.keeps.n[p] = (st.keeps.n[p] || 0) + 1; }
+  function keepWorth(st, p) {
+    const pl = st.players[p], top = st.discard[st.discard.length - 1], lv = lvl(st);
+    if (!top || !pl.opened || lv === 'easy') return false;
+    if (pl.bot && keepCount(st, p) >= KEEP_MAX) return false;
+    if (isJ(top)) return true;
+    const spare = pl.hand.filter(c => !isJ(c) && synergy(c, pl.hand) === 0 && !canLayoff(st, c, ['add']));
+    if (!spare.length) return false;
+    if (synergy(top, pl.hand) >= 2) return true;
+    const danger = st.players.some((q, i) => i !== p && q.opened && q.hand.length <= 4);
+    return lv === 'hard' && danger && spare.some(c => rankVal(c.r) >= rankVal(top.r) + 4);
   }
   function chooseDiscard(st, p) {
     const pl = st.players[p], lv = lvl(st), n = st.players.length;
-    let cands = pl.hand.filter(c => !isJ(c));
-    if (!cands.length) cands = pl.hand;
+    const took = st.turn && st.turn.p === p ? st.turn.took : null;      // взятую из сброса карту сбросить нельзя
+    let cands = pl.hand.filter(c => !isJ(c) && c.id !== took);
+    if (!cands.length) cands = pl.hand.filter(c => c.id !== took);
     if (lv === 'easy' && Math.random() < 0.25) return cands[Math.floor(Math.random() * cands.length)];
     const nx = (p + 1) % n, next = st.players[nx], nextTakes = takesOf(st, nx);
     const danger = st.players.some((q, i) => i !== p && q.opened && q.hand.length <= 5);
@@ -967,8 +1003,10 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
   function step(st) {
     const t = st.turn, p = t.p, pl = st.players[p];
     if (t.phase === 'draw') {
-      if (!t.giveUp && !(lvl(st) === 'easy' && Math.random() < 0.5) && wantDiscard(st, p)) {
+      const want = !t.giveUp && !(lvl(st) === 'easy' && Math.random() < 0.5) && wantDiscard(st, p);
+      if (want) {
         const top = st.discard[st.discard.length - 1];
+        if (want === 'keep') keepBump(st, p);
         E.draw(st, 'discard'); noteTake(st, p, top); return { k: 'l_disc', a: label(top) };
       }
       E.draw(st, 'stock'); return { k: 'l_stock' };
@@ -1018,12 +1056,13 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
       }
     }
     const d = chooseDiscard(st, p);
+    if (!d) return fail();              // в руке осталась только карта из сброса — её сбросить нельзя, переигрываем ход
     const r = E.discard(st, d.id);
     if (!r.ok) { if (t.giveUp) throw new Error('bot stuck: ' + r.err); return fail(); }
     return { k: r.end ? 'l_dropEnd' : 'l_drop', a: label(d) };
   }
 
-  const api = { step, bestMelds, evalPlan, label, noteTake };
+  const api = { step, bestMelds, evalPlan, label, noteTake, keepWorth };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.B51 = api;
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
@@ -1045,6 +1084,7 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
       if (top) {
         const p = B.evalPlan(st, hand.concat([top]), pl.opened, top.id);
         if (!p.passive && p.usesMust) return { k: 'h_drawDisc', a: [B.label(top)], select: [], meld: null };
+        if (pl.opened && B.keepWorth(Object.assign({}, st, { level: 'hard' }), me)) return { k: 'h_drawKeep', a: [B.label(top)], select: [], meld: null };
       }
       return { k: 'h_drawStock', a: [], select: [], meld: null };
     }
@@ -1220,7 +1260,7 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
     if (!status) {
       if (!playing) status = tr('s_over');
       else if (!myTurn) status = tr('s_turnOf', pname(st.players[t.p]));
-      else status = tr(t.phase === 'draw' ? 's_draw' : 's_play');
+      else status = tr(t.phase === 'draw' ? (me.opened ? 's_drawOpen' : 's_draw') : 's_play');
     }
     $('status').textContent = status; $('status').className = msgErr ? 'err' : '';
 
@@ -1418,7 +1458,7 @@ input,select{width:100%;font:inherit;padding:9px 10px;border-radius:8px;border:1
     else if (a === 'stock' && myTurn) { if (act(E.draw(st, 'stock'))) log(ME, 'l_stock'); done(); }
     else if (a === 'disc' && myTurn) {
       const top = st.discard[st.discard.length - 1];
-      if (act(E.draw(st, 'discard'), tr('m_took'))) { log(ME, 'l_disc', lbl(top)); B.noteTake(st, ME, top); }
+      if (act(E.draw(st, 'discard'), tr(st.players[ME].opened ? 'm_tookOpen' : 'm_took'))) { log(ME, 'l_disc', lbl(top)); B.noteTake(st, ME, top); }
       done();
     }
     else if (a === 'meld' && myTurn && t.phase === 'play') doLayoff(+el.dataset.mid);

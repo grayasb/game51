@@ -124,7 +124,7 @@
     if (!status) {
       if (!playing) status = tr('s_over');
       else if (!myTurn) status = tr('s_turnOf', pname(st.players[t.p]));
-      else status = tr(t.phase === 'draw' ? 's_draw' : 's_play');
+      else status = tr(t.phase === 'draw' ? (me.opened ? 's_drawOpen' : 's_draw') : 's_play');
     }
     $('status').textContent = status; $('status').className = msgErr ? 'err' : '';
 
@@ -322,7 +322,7 @@
     else if (a === 'stock' && myTurn) { if (act(E.draw(st, 'stock'))) log(ME, 'l_stock'); done(); }
     else if (a === 'disc' && myTurn) {
       const top = st.discard[st.discard.length - 1];
-      if (act(E.draw(st, 'discard'), tr('m_took'))) { log(ME, 'l_disc', lbl(top)); B.noteTake(st, ME, top); }
+      if (act(E.draw(st, 'discard'), tr(st.players[ME].opened ? 'm_tookOpen' : 'm_took'))) { log(ME, 'l_disc', lbl(top)); B.noteTake(st, ME, top); }
       done();
     }
     else if (a === 'meld' && myTurn && t.phase === 'play') doLayoff(+el.dataset.mid);

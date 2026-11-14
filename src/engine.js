@@ -263,8 +263,10 @@
     if (st.phase !== 'play' || t.phase !== 'play') return err(tr('e_drawFirst'));
     const card = pl.hand.find(c => c.id === cardId);
     if (!card) return err(tr('e_noCards'));
-    if (t.took != null && pl.hand.some(c => c.id === t.took))
-      return err(tr('e_mustLay'));
+    // карта из сброса: до открытия её нужно выложить в этот же ход; открывшийся игрок может оставить её в руке,
+    // но сбросить обратно в тот же ход нельзя
+    if (t.took != null && !t.wasOpened && pl.hand.some(c => c.id === t.took)) return err(tr('e_mustLay'));
+    if (t.took != null && cardId === t.took) return err(tr('e_sameCard'));
     const laying = needsOpen(t);
     if (!t.wasOpened && laying) {
       if (t.ownMelds < 1) return err(tr('e_needOwn'));

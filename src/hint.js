@@ -16,6 +16,7 @@
       if (top) {
         const p = B.evalPlan(st, hand.concat([top]), pl.opened, top.id);
         if (!p.passive && p.usesMust) return { k: 'h_drawDisc', a: [B.label(top)], select: [], meld: null };
+        if (pl.opened && B.keepWorth(Object.assign({}, st, { level: 'hard' }), me)) return { k: 'h_drawKeep', a: [B.label(top)], select: [], meld: null };
       }
       return { k: 'h_drawStock', a: [], select: [], meld: null };
     }
